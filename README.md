@@ -8,6 +8,14 @@ Quick scripts for preparing Termux and installing the ruri/rurima tooling used t
 curl -fsSL https://raw.githubusercontent.com/Fr4nzz/Termux-Fr4nz/refs/heads/main/setup_termux.sh | bash
 ```
 
+## Set SSH password
+
+```bash
+passwd
+```
+
+Run this inside Termux after the bootstrap finishes so password logins work.
+
 ## Install ruri and rurima
 
 ```bash

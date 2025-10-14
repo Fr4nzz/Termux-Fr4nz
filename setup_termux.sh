@@ -1,7 +1,6 @@
 #!/data/data/com.termux/files/usr/bin/bash
 # Termux-Fr4nz: minimal Termux bootstrap
 # - Installs OpenSSH + zsh
-# - Prompts user to set password later (see README)
 # - Starts sshd (port 8022)
 # - Makes zsh the default shell via chsh + termux-reload-settings
 
@@ -25,15 +24,7 @@ echo "[3/4] Starting sshd on port 8022…"
 sshd || true
 
 echo "[4/4] Making zsh your default shell…"
-# Use absolute path; chsh works on Termux >= 0.118
-ZSH_PATH="/data/data/com.termux/files/usr/bin/zsh"
-if [[ ! -x "$ZSH_PATH" ]]; then
-  echo "zsh not found at $ZSH_PATH (unexpected). Aborting." >&2
-  exit 1
-fi
-chsh -s "$ZSH_PATH" || {
-  echo "chsh failed; you can manually run: chsh -s $ZSH_PATH" >&2
-}
+chsh -s zsh
 termux-reload-settings || true
 
 cat <<'NOTE'

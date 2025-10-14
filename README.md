@@ -2,10 +2,16 @@
 
 Quick scripts for preparing Termux and installing the ruri/rurima tooling used to manage Linux distributions on Android.
 
-## Termux bootstrap
+## SSH setup
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/Fr4nzz/Termux-Fr4nz/refs/heads/main/setup_termux.sh | bash
+curl -fsSL https://raw.githubusercontent.com/Fr4nzz/Termux-Fr4nz/refs/heads/main/setup_ssh.sh | bash
+```
+
+## zsh setup
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/Fr4nzz/Termux-Fr4nz/refs/heads/main/install_zsh.sh | bash
 ```
 
 ## Set SSH password
@@ -14,7 +20,7 @@ curl -fsSL https://raw.githubusercontent.com/Fr4nzz/Termux-Fr4nz/refs/heads/main
 passwd
 ```
 
-Run this inside Termux after the bootstrap finishes so password logins work.
+Run this inside Termux after `setup_ssh.sh` finishes so password logins work.
 
 ## Install ruri and rurima
 

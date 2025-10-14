@@ -10,7 +10,7 @@ if [ -x "${PREFIX:-}/bin/pkg" ]; then
     echo "[*] Installing build dependencies…"
     pkg install -y git clang make autoconf automake libtool pkg-config libseccomp libcap binutils
     echo "[*] Installing runtime dependencies…"
-    pkg install -y xz file coreutils curl jq tar gzip proot
+    pkg install -y xz-utils file coreutils curl jq tar gzip proot
 
     TMPDIR="$(mktemp -d)"
     cleanup() {

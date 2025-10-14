@@ -65,3 +65,4 @@ TIP: If you connect via USB with ADB:
   ssh -p 8022 <username>@127.0.0.1
 
 NOTE
+zsh

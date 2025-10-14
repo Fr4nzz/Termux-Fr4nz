@@ -7,10 +7,9 @@ if [ -x "${PREFIX:-}/bin/pkg" ]; then
     echo "[*] Detected Termux environment. Installing dependencies and building from source."
     : "${PREFIX:=/data/data/com.termux/files/usr}"
     pkg update -y
-    echo "[*] Installing build dependencies…"
-    pkg install -y git clang make autoconf automake libtool pkg-config libseccomp libcap binutils
-    echo "[*] Installing runtime dependencies…"
-    pkg install -y xz-utils file coreutils curl jq tar gzip proot
+    echo "[*] Installing build and runtime dependencies…"
+    pkg install -y git clang make autoconf automake libtool pkg-config libseccomp libcap binutils \
+    xz-utils file coreutils curl jq tar gzip proot
 
     TMPDIR="$(mktemp -d)"
     cleanup() {

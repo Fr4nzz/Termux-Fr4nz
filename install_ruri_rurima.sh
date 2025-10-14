@@ -26,7 +26,15 @@ if [ -x "${PREFIX:-}/bin/pkg" ]; then
         LDFLAGS="$(pkg-config --libs libseccomp)" \
         ./configure --prefix="$PREFIX"
         make -j"$(nproc 2>/dev/null || echo 1)"
-        install -m 755 ./ruri "$PREFIX/bin/ruri"
+        # Install real binary to libexec and add a small wrapper that sets LD_LIBRARY_PATH.
+        install -Dm755 ./ruri "$PREFIX/libexec/ruri"
+        cat >"$PREFIX/bin/ruri" <<'EOF'
+#!/usr/bin/env sh
+PREFIX="${PREFIX:-/data/data/com.termux/files/usr}"
+export LD_LIBRARY_PATH="$PREFIX/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
+exec "$PREFIX/libexec/ruri" "$@"
+EOF
+        chmod 755 "$PREFIX/bin/ruri"
     )
     echo "[*] ruri installed to $PREFIX/bin/ruri"
 

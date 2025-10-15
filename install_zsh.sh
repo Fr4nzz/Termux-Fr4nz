@@ -24,6 +24,7 @@ cat > "$HOME/.zshrc" <<'ZRC'
 plugdir="$HOME/.local/share/zsh/plugins"
 source "$plugdir/zsh-autosuggestions/zsh-autosuggestions.zsh"
 source "$plugdir/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh"
+setopt interactive_comments
 ZRC
 
 echo "[4/4] Making zsh your default shell…"

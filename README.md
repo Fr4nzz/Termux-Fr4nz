@@ -22,56 +22,93 @@ passwd
 
 Run this inside Termux after `setup_ssh.sh` finishes so password logins work.
 
-## Install ruri and rurima
+## Install rurima (bundled ruri)
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/Fr4nzz/Termux-Fr4nz/refs/heads/main/install_ruri_rurima.sh | bash
+curl -fsSL https://raw.githubusercontent.com/Fr4nzz/Termux-Fr4nz/refs/heads/main/install_rurima.sh | bash
 ```
 
 Both scripts assume you are running inside Termux. The installer builds from source and installs the binaries into `$PREFIX/bin` without additional prompts.
 
-### Usage tips
+### Usage
 
 ```bash
-# As your normal Termux user
+# Create/pull the container as your normal Termux user
 CONTAINER="$HOME/containers/ubuntu-noble"
 rurima lxc pull -o ubuntu -v noble -s "$CONTAINER"
-ruri "$CONTAINER" /bin/bash -l
-
-# As root via tsu — pre-expand paths and use -- so args go to ruri
-P=/data/data/com.termux/files/usr
-CONTAINER="$HOME/containers/ubuntu-noble"
-command "$P/bin/tsu" -s "$P/bin/ruri" -- "$CONTAINER" /bin/bash -l
-
-# Optional: example minimal config (values must be quoted for libk2v)
-cat >/sdcard/ub-noble.k2v <<'EOF'
-container_dir = "/data/data/com.termux/files/home/containers/ubuntu-noble"
-no_warnings   = "true"
-use_rurienv   = "false"
-EOF
-ruri -c /sdcard/ub-noble.k2v /bin/bash -l
 ```
 
-### Post-install retrofit (if you installed earlier)
+#### First run: fix networking & permissions inside Ubuntu
+
+Run the daijin `fixup.sh` **inside** the container. We fetch it from Termux and pipe it into `/bin/sh` **in the container**, so this works even if the container's DNS is broken.
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/RuriOSS/daijin/refs/heads/main/src/share/fixup.sh \
+  | sudo rurima r "$HOME/containers/ubuntu-noble" /bin/sh
+```
+
+This sets PATH, creates Android AID groups, adds `root` to them, fixes `_apt` and `portage`, adjusts `/bin/su` perms, creates `/dev` `/proc` `/sys` mountpoints, and writes `/etc/resolv.conf` to fix internet.
+
+#### Unmount / cleanup
+
+When you’re done, unmount the container from Termux (this also kills any processes inside it):
+
+```bash
+sudo rurima r -U "$HOME/containers/ubuntu-noble"
+```
+
+#### Mount Android storage into Ubuntu home
+
+To expose `/sdcard` (i.e. `/storage/emulated/0`) inside Ubuntu at `~/sdcard`, include `-m /sdcard /root/sdcard` when launching (the helper below does this automatically):
+
+```bash
+sudo rurima r -m /sdcard /root/sdcard "$HOME/containers/ubuntu-noble"
+```
+
+If you use a non-root user inside Ubuntu, swap `/root/sdcard` for `/home/<user>/sdcard`. Re-run the same command in sessions where you launch rurima directly.
+
+#### Preferred: single-command entry (no interactive `tsu`)
+
+Enter the container as root in one shot (default shell):
+
+```bash
+sudo rurima r "$HOME/containers/ubuntu-noble"
+```
+
+#### Optional: interactive `tsu` then run `rurima r`
+
+> **Note:** After `tsu`, `$HOME` becomes `/data/data/com.termux/files/home/.suroot`.
+> Don’t use `$HOME` for the container path while root; use the absolute path below.
+
+```bash
+tsu
+/data/data/com.termux/files/usr/bin/rurima r "/data/data/com.termux/files/home/containers/ubuntu-noble"
+```
+
+#### Create a shortcut command `ubuntu`
+
+If you prefer typing just `ubuntu` to enter the container (with optional args):
 
 ```bash
 P=/data/data/com.termux/files/usr
-cat >"$P/bin/ruri" <<'EOF'
+cat >"$P/bin/ubuntu" <<'SH'
 #!/data/data/com.termux/files/usr/bin/sh
-PREFIX="/data/data/com.termux/files/usr"
-unset LD_PRELOAD
-export LD_LIBRARY_PATH="$PREFIX/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
-export ruri_rexec=1
-exec "$PREFIX/libexec/ruri" "$@"
-EOF
-chmod 0755 "$P/bin/ruri"; hash -r
+C="/data/data/com.termux/files/home/containers/ubuntu-noble"
+R="/data/data/com.termux/files/usr/bin/rurima"
+if [ "$#" -gt 0 ]; then
+    exec sudo "$R" r -m /sdcard /root/sdcard "$C" "$@"
+else
+    exec sudo "$R" r -m /sdcard /root/sdcard "$C"
+fi
+SH
+chmod 0755 "$P/bin/ubuntu"
+hash -r
 ```
 
-### Root one-liners (important: `--` so flags go to zsh)
+Now run:
 
 ```bash
-P=/data/data/com.termux/files/usr
-command "$P/bin/tsu" -s "$P/bin/zsh" -- -lc 'echo ok # comment works if you add -o interactive_comments'
+ubuntu               # enter container (default shell, /sdcard mounted at ~/sdcard)
 ```
 
 ## Install R binaries on Ubuntu

@@ -34,8 +34,7 @@ setopt interactive_comments
 # Always start zsh when using tsu (Option 1)
 # Uses absolute Termux paths so it works reliably under tsu
 tsu () {
-  local P=/data/data/com.termux/files/usr
-  command "$P/bin/tsu" -s "$P/bin/zsh" "$@"
+  command /data/data/com.termux/files/usr/bin/tsu -s zsh "$@"
 }
 ZRC
 

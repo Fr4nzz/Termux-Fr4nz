@@ -26,28 +26,42 @@ ARCH="$(dpkg --print-architecture)"
 echo "==> Ubuntu: ${CODENAME}  arch: ${ARCH}  user: ${TARGET_USER}"
 
 # --- 1) Keys & Repos: CRAN (R) + r2u (binary R packages) --------------------
-echo "==> Adding keyring for CRAN/r2u…"
+echo "==> Adding keyrings for CRAN and r2u…"
 install -d -m 0755 /usr/share/keyrings
 
-# Use the r2u-provided keyring (covers both CRAN apt and r2u)
-curl -fsSL https://r2u.stat.illinois.edu/ubuntu/cran-archive-keyring.gpg \
-  -o /usr/share/keyrings/cran-archive-keyring.gpg
+# Ensure crypto tools are present for key imports
+apt-get install -y --no-install-recommends gnupg ca-certificates curl
 
-echo "==> Writing apt sources…"
-# CRAN apt repo for R itself
-cat >/etc/apt/sources.list.d/cranapt.list <<EOF
-deb [arch=${ARCH} signed-by=/usr/share/keyrings/cran-archive-keyring.gpg] https://cloud.r-project.org/bin/linux/ubuntu ${CODENAME}-cran40/
+# 1a) CRAN apt repo for R itself (maintained key + Signed-By)
+curl -fsSL https://cloud.r-project.org/bin/linux/ubuntu/marutter_pubkey.asc \
+  | gpg --dearmor -o /usr/share/keyrings/cran_ubuntu_key.gpg
+
+cat >/etc/apt/sources.list.d/cran_r.list <<EOF
+deb [arch=${ARCH} signed-by=/usr/share/keyrings/cran_ubuntu_key.gpg] https://cloud.r-project.org/bin/linux/ubuntu ${CODENAME}-cran40/
 EOF
 
-if [[ "${ARCH}" == "amd64" ]]; then
-  # r2u: 8k+ CRAN packages as native Ubuntu .deb binaries (auto-built daily)
+# 1b) r2u repo (CRAN packages as native Ubuntu binaries)
+gpg --homedir /tmp --no-default-keyring \
+    --keyring /usr/share/keyrings/r2u.gpg \
+    --keyserver keyserver.ubuntu.com \
+    --recv-keys A1489FE2AB99A21A 67C2D66C4B1D4339 51716619E084DAB9
+
+if [[ "${ARCH}" == "amd64" ]] || { [[ "${ARCH}" == "arm64" ]] && [[ "${CODENAME}" == "noble" ]]; }; then
   cat >/etc/apt/sources.list.d/r2u.list <<EOF
-deb [arch=${ARCH} signed-by=/usr/share/keyrings/cran-archive-keyring.gpg] https://r2u.stat.illinois.edu/ubuntu ${CODENAME} main
+deb [arch=${ARCH} signed-by=/usr/share/keyrings/r2u.gpg] https://r2u.stat.illinois.edu/ubuntu ${CODENAME} main
 EOF
 else
-  echo "==> Skipping r2u repo: no binary builds published for ${ARCH}"
+  echo "==> Skipping r2u repo: no published builds for ${ARCH} on ${CODENAME}"
   rm -f /etc/apt/sources.list.d/r2u.list
 fi
+
+# Optional: pin CRAN apt higher than Ubuntu’s own r-cran-* packages
+cat >/etc/apt/preferences.d/99-cranapt <<'EOF'
+Package: *
+Pin: release o=CRAN-Apt Project
+Pin: release l=CRAN-Apt Packages
+Pin-Priority: 700
+EOF
 
 echo "==> apt update…"
 apt-get update -y
@@ -56,7 +70,7 @@ apt-get update -y
 echo "==> Installing R and helpers…"
 apt-get install -y --no-install-recommends \
   r-base r-base-dev \
-  python3-gi python3-dbus policykit-1 \
+  python3-gi python3-dbus python3-apt policykit-1 \
   sudo ca-certificates curl
 
 # --- 3) Install bspm (apt if available; else CRAN) ---------------------------
@@ -66,9 +80,9 @@ if apt-cache show r-cran-bspm >/dev/null 2>&1; then
 else
   if [[ "${TARGET_USER}" == "root" ]]; then
     Rscript --vanilla -e 'install.packages("bspm", repos="https://cran.r-project.org")'
-else
+  else
     su - "${TARGET_USER}" -c "Rscript --vanilla -e 'install.packages(\"bspm\", repos=\"https://cran.r-project.org\")'"
-fi
+  fi
 fi
 
 # --- 4) Ensure passwordless sudo for bspm when needed ------------------------

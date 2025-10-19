@@ -145,16 +145,8 @@ ubuntu-u
 
 This installs the latest R and configures `install.packages()` to grab binaries instead of compiling. **Run it inside Ubuntu**:
 
-If you use the `ubuntu` helper:
-
 ```bash
-curl -fsSL https://raw.githubusercontent.com/Fr4nzz/Termux-Fr4nz/refs/heads/main/setup-r-binaries.sh \
-  | ubuntu /bin/bash -s
-```
-
-Or without the helper:
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/Fr4nzz/Termux-Fr4nz/refs/heads/main/setup-r-binaries.sh \
-  | sudo rurima r "$HOME/containers/ubuntu-noble" /bin/bash -s
+apt-get update -y
+apt-get install -y --no-install-recommends curl ca-certificates
+curl -fsSL https://raw.githubusercontent.com/Fr4nzz/Termux-Fr4nz/refs/heads/main/setup-r-binaries.sh | bash
 ```

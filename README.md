@@ -59,6 +59,12 @@ sudo rurima r "$HOME/containers/ubuntu-noble"
 
 #### Mount Android storage into Ubuntu home
 
+Make sure you’ve run `termux-setup-storage` first, then create the mountpoint inside the container rootfs (one-time):
+
+```bash
+mkdir -p "$HOME/containers/ubuntu-noble/root/sdcard"
+```
+
 To expose `/sdcard` (i.e. `/storage/emulated/0`) inside Ubuntu at `~/sdcard`, include `-m /sdcard /root/sdcard` when launching (the helper below does this automatically):
 
 ```bash
@@ -85,7 +91,7 @@ When you’re done, unmount the container from Termux (this also kills any proce
 sudo rurima r -U "$HOME/containers/ubuntu-noble"
 ```
 
-#### Create a shortcut command `ubuntu`
+#### Create a shortcut command `ubuntu` (bind-mount `/sdcard` → `/root/sdcard`)
 
 If you prefer typing just `ubuntu` to enter the container (with optional args):
 
@@ -95,10 +101,11 @@ cat >"$P/bin/ubuntu" <<'SH'
 #!/data/data/com.termux/files/usr/bin/sh
 C="/data/data/com.termux/files/home/containers/ubuntu-noble"
 R="/data/data/com.termux/files/usr/bin/rurima"
+SRC='/sdcard'  # requires `termux-setup-storage`
 if [ "$#" -gt 0 ]; then
-    exec sudo "$R" r -m /sdcard /root/sdcard "$C" "$@"
+    exec sudo "$R" r -m "$SRC" /root/sdcard "$C" "$@"
 else
-    exec sudo "$R" r -m /sdcard /root/sdcard "$C"
+    exec sudo "$R" r -m "$SRC" /root/sdcard "$C"
 fi
 SH
 chmod 0755 "$P/bin/ubuntu"
@@ -109,11 +116,13 @@ Now run:
 
 ```bash
 ubuntu               # enter container (default shell, /sdcard mounted at ~/sdcard)
+ubuntu /bin/bash -l  # run specific command
+# Inside Ubuntu the bind mount appears at /root/sdcard
 ```
 
-#### Create a shortcut to unmount `ubuntu`
+#### Optional: unmount helper if something is stuck
 
-For a quick teardown command:
+For a quick teardown command when mounts persist:
 
 ```bash
 P=/data/data/com.termux/files/usr

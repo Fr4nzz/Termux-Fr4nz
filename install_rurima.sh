@@ -33,17 +33,24 @@ if [ -x "${PREFIX:-}/bin/pkg" ]; then
 # Termux-friendly rurima launcher:
 # - Neutralize termux-exec preload (LD_PRELOAD)
 # - Keep Termux libs visible (LD_LIBRARY_PATH)
-# - Skip ruri's env-wiping re-exec (ruri_rexec=1) for bundled commands
+# - Ensure Termux $PREFIX/bin is in PATH so deps (curl/jq/tar/…) are found
 PREFIX="/data/data/com.termux/files/usr"
 unset LD_PRELOAD
 export LD_LIBRARY_PATH="$PREFIX/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
+# Prepend $PREFIX/bin to PATH if missing
+case ":$PATH:" in
+  *":$PREFIX/bin:"*) : ;;
+  *) PATH="$PREFIX/bin:$PATH" ;;
+esac
+export PATH
+# Skip ruri's env-wiping re-exec for bundled ruri inside rurima
 export ruri_rexec=1
 exec "$PREFIX/libexec/rurima" "$@"
 EOF
         chmod 0755 "$PREFIX/bin/rurima"
         hash -r || true
     )
-    echo "[*] rurima installed to $PREFIX/bin/rurima"
+    echo "[*] rurima installed (wrapper): $PREFIX/bin/rurima -> $PREFIX/libexec/rurima"
 
     echo "[*] Done."
     exit 0

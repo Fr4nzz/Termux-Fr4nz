@@ -1,7 +1,7 @@
 #!/data/data/com.termux/files/usr/bin/bash
 set -euo pipefail
 
-# Installs rurima (which bundles ruri) on Termux and makes it Just Work™ with tsu/root.
+# Installs rurima (which bundles ruri) on Termux using Termux's environment.
 
 if [ -x "${PREFIX:-}/bin/pkg" ]; then
     : "${PREFIX:=/data/data/com.termux/files/usr}"
@@ -25,32 +25,11 @@ if [ -x "${PREFIX:-}/bin/pkg" ]; then
         LDFLAGS="$(pkg-config --libs libseccomp libcap 2>/dev/null || true)" \
         ./configure --prefix="$PREFIX"
         make -j"$(nproc 2>/dev/null || echo 1)"
-
-        # Install the real binary and ship a Termux-safe wrapper in bin.
-        install -Dm755 ./rurima "$PREFIX/libexec/rurima"
-        cat >"$PREFIX/bin/rurima" <<'EOF'
-#!/data/data/com.termux/files/usr/bin/sh
-# Termux-friendly rurima launcher:
-# - Neutralize termux-exec preload (LD_PRELOAD)
-# - Keep Termux libs visible (LD_LIBRARY_PATH)
-# - Ensure Termux $PREFIX/bin is in PATH so deps (curl/jq/tar/…) are found
-PREFIX="/data/data/com.termux/files/usr"
-unset LD_PRELOAD
-export LD_LIBRARY_PATH="$PREFIX/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
-# Prepend $PREFIX/bin to PATH if missing
-case ":$PATH:" in
-  *":$PREFIX/bin:"*) : ;;
-  *) PATH="$PREFIX/bin:$PATH" ;;
-esac
-export PATH
-# Skip ruri's env-wiping re-exec for bundled ruri inside rurima
-export ruri_rexec=1
-exec "$PREFIX/libexec/rurima" "$@"
-EOF
-        chmod 0755 "$PREFIX/bin/rurima"
+        # Install rurima directly to bin (no wrapper required).
+        install -Dm755 ./rurima "$PREFIX/bin/rurima"
         hash -r || true
     )
-    echo "[*] rurima installed (wrapper): $PREFIX/bin/rurima -> $PREFIX/libexec/rurima"
+    echo "[*] rurima installed to $PREFIX/bin/rurima"
 
     echo "[*] Done."
     exit 0

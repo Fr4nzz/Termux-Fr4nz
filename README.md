@@ -49,12 +49,12 @@ curl -fsSL https://raw.githubusercontent.com/RuriOSS/daijin/refs/heads/main/src/
 
 This sets PATH, creates Android AID groups, adds `root` to them, fixes `_apt` and `portage`, adjusts `/bin/su` perms, creates `/dev` `/proc` `/sys` mountpoints, and writes `/etc/resolv.conf` to fix internet.
 
-#### Unmount / cleanup
+#### Preferred: single-command entry (no interactive `tsu`)
 
-When you’re done, unmount the container from Termux (this also kills any processes inside it):
+Enter the container as root in one shot (default shell):
 
 ```bash
-sudo rurima r -U "$HOME/containers/ubuntu-noble"
+sudo rurima r "$HOME/containers/ubuntu-noble"
 ```
 
 #### Mount Android storage into Ubuntu home
@@ -67,14 +67,6 @@ sudo rurima r -m /sdcard /root/sdcard "$HOME/containers/ubuntu-noble"
 
 If you use a non-root user inside Ubuntu, swap `/root/sdcard` for `/home/<user>/sdcard`. Re-run the same command in sessions where you launch rurima directly.
 
-#### Preferred: single-command entry (no interactive `tsu`)
-
-Enter the container as root in one shot (default shell):
-
-```bash
-sudo rurima r "$HOME/containers/ubuntu-noble"
-```
-
 #### Optional: interactive `tsu` then run `rurima r`
 
 > **Note:** After `tsu`, `$HOME` becomes `/data/data/com.termux/files/home/.suroot`.
@@ -83,6 +75,14 @@ sudo rurima r "$HOME/containers/ubuntu-noble"
 ```bash
 tsu
 /data/data/com.termux/files/usr/bin/rurima r "/data/data/com.termux/files/home/containers/ubuntu-noble"
+```
+
+#### Unmount / cleanup
+
+When you’re done, unmount the container from Termux (this also kills any processes inside it):
+
+```bash
+sudo rurima r -U "$HOME/containers/ubuntu-noble"
 ```
 
 #### Create a shortcut command `ubuntu`
@@ -109,6 +109,27 @@ Now run:
 
 ```bash
 ubuntu               # enter container (default shell, /sdcard mounted at ~/sdcard)
+```
+
+#### Create a shortcut to unmount `ubuntu`
+
+For a quick teardown command:
+
+```bash
+P=/data/data/com.termux/files/usr
+cat >"$P/bin/ubuntu-u" <<'SH'
+#!/data/data/com.termux/files/usr/bin/sh
+C="/data/data/com.termux/files/home/containers/ubuntu-noble"
+exec sudo /data/data/com.termux/files/usr/bin/rurima r -U "$C"
+SH
+chmod 0755 "$P/bin/ubuntu-u"
+hash -r
+```
+
+Use it whenever you need to unmount:
+
+```bash
+ubuntu-u
 ```
 
 ## Install R binaries on Ubuntu

@@ -29,3 +29,11 @@ curl -fsSL https://raw.githubusercontent.com/Fr4nzz/Termux-Fr4nz/refs/heads/main
 ```
 
 Both scripts assume you are running inside Termux. The installer builds from source and installs the binaries into `$PREFIX/bin` without additional prompts.
+
+## Install R binaries on Ubuntu
+
+This scripts install latest R version and sets install.packages to download binaries instead of the slow option of compiling from source (This script should work for any ubuntu version not only in termux)
+
+```bash
+sudo bash setup-r-binaries.sh
+```

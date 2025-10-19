@@ -143,8 +143,18 @@ ubuntu-u
 
 ## Install R binaries on Ubuntu
 
-This scripts install latest R version and sets install.packages to download binaries instead of the slow option of compiling from source (This script should work for any ubuntu version not only in termux)
+This installs the latest R and configures `install.packages()` to grab binaries instead of compiling. **Run it inside Ubuntu**:
+
+If you use the `ubuntu` helper:
 
 ```bash
-sudo bash setup-r-binaries.sh
+curl -fsSL https://raw.githubusercontent.com/Fr4nzz/Termux-Fr4nz/refs/heads/main/setup-r-binaries.sh \
+  | ubuntu /bin/bash -s
+```
+
+Or without the helper:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/Fr4nzz/Termux-Fr4nz/refs/heads/main/setup-r-binaries.sh \
+  | sudo rurima r "$HOME/containers/ubuntu-noble" /bin/bash -s
 ```

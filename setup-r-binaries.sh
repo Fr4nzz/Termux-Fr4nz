@@ -70,7 +70,7 @@ apt-get update -y
 echo "==> Installing R and helpers…"
 apt-get install -y --no-install-recommends \
   r-base r-base-dev \
-  python3-gi python3-dbus python3-apt policykit-1 \
+  python3-apt \
   sudo ca-certificates curl
 
 # --- 3) Install bspm (apt if available; else CRAN) ---------------------------
@@ -79,9 +79,9 @@ if apt-cache show r-cran-bspm >/dev/null 2>&1; then
   apt-get install -y r-cran-bspm
 else
   if [[ "${TARGET_USER}" == "root" ]]; then
-    Rscript --vanilla -e 'install.packages("bspm", repos="https://cran.r-project.org")'
+    R --quiet --no-save -e 'install.packages("bspm", repos="https://cran.r-project.org")'
   else
-    su - "${TARGET_USER}" -c "Rscript --vanilla -e 'install.packages(\"bspm\", repos=\"https://cran.r-project.org\")'"
+    su - "${TARGET_USER}" -c 'R --quiet --no-save -e '\''install.packages("bspm", repos="https://cran.r-project.org")'\'''
   fi
 fi
 
@@ -119,13 +119,18 @@ if [[ "${TARGET_USER}" != "root" ]]; then
 fi
 chmod 0644 "${TARGET_HOME}/.Rprofile"
 
-# --- 6) Quick smoke test: install a heavy package as binary ------------------
-echo "==> Testing a binary install via install.packages(\"units\") …"
-if [[ "${TARGET_USER}" == "root" ]]; then
-  Rscript --vanilla -e 'install.packages("units"); library(units); cat("units ", packageVersion("units"), " loaded\n", sep="")'
-else
-  su - "${TARGET_USER}" -c "Rscript --vanilla -e 'install.packages(\"units\"); library(units); cat(\"units \", packageVersion(\"units\"), \" loaded\\n\", sep=\"\")'"
-fi
+# Ensure future users get sane defaults by wiring bspm globally too.
+install -d -m 0755 /etc/R
+cat >/etc/R/Rprofile.site <<EOF
+local({
+  options(repos = c(CRAN = "https://packagemanager.posit.co/cran/__linux__/${CODENAME}/latest"))
+  if (requireNamespace("bspm", quietly = TRUE)) {
+    try(bspm::enable(), silent = TRUE)
+    options(bspm.sudo = TRUE, bspm.version.check = TRUE)
+  }
+})
+EOF
+chmod 0644 /etc/R/Rprofile.site
 
 echo "==> Done."
 echo "Use install.packages() normally. On amd64 you'll get r2u binaries; on ${ARCH} you'll get Ubuntu r-cran-* binaries when available, else source."

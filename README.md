@@ -35,7 +35,7 @@ Both scripts assume you are running inside Termux. The installer builds from sou
 ```bash
 # Create/pull the container as your normal Termux user
 CONTAINER="$HOME/containers/ubuntu-noble"
-rurima lxc pull -o ubuntu -v noble -s "$CONTAINER"
+sudo rurima lxc pull -o ubuntu -v noble -s "$CONTAINER"
 ```
 
 #### First run: fix networking & permissions inside Ubuntu
@@ -56,6 +56,18 @@ Enter the container as root in one shot (default shell):
 ```bash
 sudo rurima r "$HOME/containers/ubuntu-noble"
 ```
+
+##Set terminal type inside Ubuntu (fix “TERM environment variable not set”)
+
+For a clean clear, top, etc. in minimal containers:
+```bash
+# set for this shell
+export TERM=xterm-256color
+# make it persistent for root
+echo 'export TERM=xterm-256color' >> /root/.bashrc
+```
+
+If you use a non-root user inside Ubuntu, add the same line to that user’s ~/.bashrc.
 
 #### Mount Android storage into Ubuntu home
 
@@ -143,10 +155,18 @@ ubuntu-u
 
 ## Install R binaries on Ubuntu
 
-This installs the latest R and configures `install.packages()` to grab binaries instead of compiling. **Run it inside Ubuntu**:
+This installs the latest R and configures `install.packages()` to use binaries via **bspm** (CRAN APT + r2u). **Run it inside Ubuntu**.
+
+> Supported: Ubuntu 22.04 (jammy) / 24.04 (noble).  
+> r2u binaries: **amd64** (jammy & noble), **arm64** (noble).
 
 ```bash
+# Inside the Ubuntu container/rootfs
+export DEBIAN_FRONTEND=noninteractive
 apt-get update -y
-apt-get install -y --no-install-recommends curl ca-certificates
+# Base tools so package post-install scripts work in minimal images
+apt-get install -y --no-install-recommends debconf debconf-i18n gnupg ca-certificates curl
+
+# Install R + bspm/r2u setup
 curl -fsSL https://raw.githubusercontent.com/Fr4nzz/Termux-Fr4nz/refs/heads/main/setup-r-binaries.sh | bash
 ```

@@ -1,58 +1,73 @@
 #!/data/data/com.termux/files/usr/bin/bash
-# Termux-Fr4nz: zsh bootstrap
-# - Installs zsh + git
-# - Installs basic zsh plugins + writes a minimal zshrc (with tsu->zsh wrapper)
-# - Makes zsh the default shell via chsh + termux-reload-settings
+# Termux + Oh My Zsh (robust under tsu; unattended; Termux/SSH-friendly)
 
 set -euo pipefail
+say(){ printf "\n[%s] %s\n" "$1" "$2"; }
 
-echo "[1/5] Updating packages…"
+say "1/5" "Update & install base packages…"
 pkg update -y >/dev/null
 pkg upgrade -y || true
+pkg install -y zsh git curl fzf tsu >/dev/null
 
-echo "[2/5] Installing zsh + git…"
-pkg install -y zsh git >/dev/null
+say "2/5" "Install Oh My Zsh (unattended)…"
+export RUNZSH=no CHSH=no
+sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" "" --unattended
 
-echo "[3/5] Installing zsh plugins (no checks/backups) and writing ~/.zshrc…"
-PLUGDIR="$HOME/.local/share/zsh/plugins"
-rm -rf "$PLUGDIR"
-mkdir -p "$PLUGDIR"
-git clone --depth=1 https://github.com/zsh-users/zsh-autosuggestions "$PLUGDIR/zsh-autosuggestions" >/dev/null
-git clone --depth=1 https://github.com/zsh-users/zsh-syntax-highlighting "$PLUGDIR/zsh-syntax-highlighting" >/dev/null
+say "3/5" "Add OMZ custom plugins (autosuggestions + syntax-highlighting)…"
+ZSH_CUSTOM="${ZSH_CUSTOM:-$HOME/.oh-my-zsh/custom}"
+rm -rf "$ZSH_CUSTOM/plugins/zsh-autosuggestions" \
+       "$ZSH_CUSTOM/plugins/zsh-syntax-highlighting"
+git clone --depth=1 https://github.com/zsh-users/zsh-autosuggestions \
+  "$ZSH_CUSTOM/plugins/zsh-autosuggestions" >/dev/null
+git clone --depth=1 https://github.com/zsh-users/zsh-syntax-highlighting \
+  "$ZSH_CUSTOM/plugins/zsh-syntax-highlighting" >/dev/null
 
+say "4/5" "Write ~/.zshrc (robust OMZ path + keybindings)…"
 cat > "$HOME/.zshrc" <<'ZRC'
-# Prefer $ZDOTDIR (if set), else HOME; fall back to user path if root HOME lacks plugins
-plugdir="${ZDOTDIR:-$HOME}/.local/share/zsh/plugins"
-[ -d "$plugdir" ] || plugdir="/data/data/com.termux/files/home/.local/share/zsh/plugins"
+# ----- Oh My Zsh base (robust under tsu) -----
+# Prefer $HOME/.oh-my-zsh; if not present (e.g., HOME=.suroot under tsu),
+# fall back to the *real* Termux home derived from $PREFIX (/data/.../files/home).
+# This avoids /data/.../.suroot/.oh-my-zsh lookups.
+_termux_home="${PREFIX%/usr}/home"
+if [[ -d "$HOME/.oh-my-zsh" ]]; then
+  export ZSH="$HOME/.oh-my-zsh"
+elif [[ -d "$_termux_home/.oh-my-zsh" ]]; then
+  export ZSH="$_termux_home/.oh-my-zsh"
+fi
 
-source "$plugdir/zsh-autosuggestions/zsh-autosuggestions.zsh"
-source "$plugdir/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh"
+plugins=(git z sudo history-substring-search fzf zsh-autosuggestions zsh-syntax-highlighting)
+ZSH_THEME="robbyrussell"
+source "$ZSH/oh-my-zsh.sh"
 
-# Treat '#' as comments in interactive shells
-setopt interactive_comments
+# ----- Editing, completion, history -----
+bindkey -e
+autoload -Uz compinit && compinit -i
+autoload -U select-word-style; select-word-style bash
+HISTFILE=$HOME/.zsh_history; HISTSIZE=50000; SAVEHIST=50000
+setopt interactive_comments hist_ignore_dups share_history
 
-# Always start zsh when using tsu (Option 1)
-# Uses absolute Termux paths so it works reliably under tsu
-tsu () {
-  command /data/data/com.termux/files/usr/bin/tsu -s zsh "$@"
-}
+# ----- Termux/SSH-friendly keybindings (no prompts) -----
+# 1) Prefer terminfo
+[[ -n ${terminfo[khome]} ]] && { bindkey -M emacs "${terminfo[khome]}" beginning-of-line; bindkey -M viins "${terminfo[khome]}" beginning-of-line; }
+[[ -n ${terminfo[kend]}  ]] && { bindkey -M emacs "${terminfo[kend]}"  end-of-line;      bindkey -M viins "${terminfo[kend]}"  end-of-line; }
+
+# ----- tsu wrapper: root zsh with same config -----
+# Always use absolute path so it works even if PATH differs under tsu.
+tsu(){ command /data/data/com.termux/files/usr/bin/tsu -s zsh "$@"; }
 ZRC
 
-echo "[4/5] Let root share your zsh config for tsu sessions…"
+say "5/5" "Make zsh default, share config with root, finalize…"
 mkdir -p "$HOME/.suroot"
 ln -sf "$HOME/.zshrc" "$HOME/.suroot/.zshrc"
-
-echo "[5/5] Making zsh your default shell…"
 chsh -s zsh
 termux-reload-settings || true
 
 cat <<'NOTE'
 
-✅ zsh is ready!
-
-- Open a new Termux session: you’ll land in zsh with autosuggestions + syntax highlighting.
-- Run `tsu`: you’ll get **zsh as root**; it loads the same config.
-- One-liners: `tsu -s /data/.../zsh -- -lc 'echo hi'` (note the `--` separator).
+✅ Done: OMZ + plugins + robust tsu setup
+- Root (`tsu`) now sources OMZ from the *real* Termux home if HOME=.suroot.
+- Keys fixed non-interactively (Home/End, Ctrl←/→).
+- Change theme/plugins: edit ~/.zshrc; then `exec zsh`.
 
 NOTE
 

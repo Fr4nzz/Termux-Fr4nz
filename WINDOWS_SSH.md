@@ -35,7 +35,7 @@ From Windows PowerShell or CMD:
 ```powershell
 ssh -p 8022 <username>@<phone_ip>
 # example:
-# ssh -p 8022 u0_a612@192.168.100.109
+# ssh -p 8022 u0_a612@192.168.1.5
 ```
 
 You’ll be asked for the password you set with `passwd` during setup.

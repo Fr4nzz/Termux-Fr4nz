@@ -3,15 +3,6 @@
 On Android, `rurima r` (ruri) needs kernel capabilities that only root has.  
 For **no-root**, use `proot` (userspace emulation of namespaces/mounts).
 
-## Ownership tip (only if you used sudo before)
-
-If you previously pulled a container with `sudo`, fix ownership once:
-
-```bash
-ls -ld "$HOME/containers"
-sudo chown -R "$USER:$USER" "$HOME/containers"
-```
-
 ## (Optional) First-run fixups via proot
 
 ```bash

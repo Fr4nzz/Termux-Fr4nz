@@ -66,3 +66,22 @@ When you’re done, unmount from Termux (also kills processes inside):
 ```bash
 sudo rurima r -U "$HOME/containers/ubuntu-noble"
 ```
+
+### Optional helper: `ubuntu-u` (unmount shortcut)
+
+```bash
+P=/data/data/com.termux/files/usr
+cat >"$P/bin/ubuntu-u" <<'SH'
+#!/data/data/com.termux/files/usr/bin/sh
+C="/data/data/com.termux/files/home/containers/ubuntu-noble"
+exec /data/data/com.termux/files/usr/bin/sudo /data/data/com.termux/files/usr/bin/rurima r -U "$C"
+SH
+chmod 0755 "$P/bin/ubuntu-u"
+hash -r
+```
+
+Usage:
+
+```bash
+ubuntu-u
+```

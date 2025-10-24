@@ -2,7 +2,7 @@
 
 This starts XFCE from a proot container and displays it in Termux:X11.
 
-> TL;DR  
+> TL;DR
 > Start ONE Termux:X11 server on :1 (Termux user), `xhost +LOCAL:`, **bind only `/tmp/.X11-unix`** in your proot args, then inside Ubuntu:
 >
 > ```bash
@@ -22,33 +22,7 @@ pkg install -y pulseaudio xkeyboard-config
 
 ---
 
-## 1) Pull/create the NON-ROOT container (separate path) + register
-
-```bash
-CONTAINER="$HOME/containers/ubuntu-rootless"
-rurima lxc list      # browse images
-rurima lxc pull -o ubuntu -v noble -s "$CONTAINER"
-
-# register with daijin (TUI) OR via script:
-daijin     # choose: [4] register
-# Path:    /data/data/com.termux/files/home/containers/ubuntu-rootless
-# Backend: 2) proot
-# Name:    ubuntu-rootless
-```
-
-One-time Daijin fixups (recommended):
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/RuriOSS/daijin/refs/heads/main/src/share/fixup.sh \
-  | "$PREFIX/share/daijin/proot_start.sh" -r "$CONTAINER" \
-    /usr/bin/env -i HOME=/root TERM=xterm-256color \
-    PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin \
-    /bin/sh
-```
-
----
-
-## 2) Start ONE Termux:X11 server on :1
+## 1) Start ONE Termux:X11 server on :1
 
 ```bash
 am broadcast -a com.termux.x11.ACTION_STOP -p com.termux.x11 || true
@@ -69,7 +43,7 @@ ls -l "$PREFIX/tmp/.X11-unix"
 
 ---
 
-## 3) Replace the “enter” wrapper for NON-ROOT with X11 bind
+## 2) Replace the “enter” wrapper for NON-ROOT with X11 bind
 
 ```bash
 P="$PREFIX/bin"
@@ -104,39 +78,41 @@ ubuntu-rootless-u   # kill matching proot if needed
 
 ---
 
-## 4) Inside Ubuntu (first time): packages
+## 3) Inside Ubuntu (first time): packages
 
 ```bash
-## 4) Inside Ubuntu (first time): packages (proot, no service starts)
-
-# Sane env for maintainer scripts
 export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 export DEBIAN_FRONTEND=noninteractive
 
 apt-get update -y
 
-# Ensure debconf exists first so /usr/sbin/dpkg-preconfigure is present
+# Ensure debconf first
 apt-get install -y --no-install-recommends debconf
 
-# Pre-install helpers that many maintainer scripts expect
-apt-get install -y --no-install-recommends \
-  debconf-i18n init-system-helpers perl-base adduser dialog \
-  locales tzdata sgml-base xml-core emacsen-common
+# Common helpers many postinsts need
+apt-get install -y --reinstall --no-install-recommends \
+  debconf-i18n init-system-helpers perl-base adduser dialog locales tzdata
 
-# Desktop bits
+# sgml/xml helpers and settle anything pending
+apt-get install -y --reinstall --no-install-recommends sgml-base xml-core
+dpkg --configure -a || true
+apt-get -o Dpkg::Options::="--force-confnew" -f install
+
+# Desktop bits (explicit; avoid xfce4-goodies)
 apt-get install -y --no-install-recommends \
-  xfce4 xfce4-goodies dbus dbus-x11 \
-  xterm fonts-dejavu-core x11-utils psmisc locales
+  xfce4-session xfce4-panel xfwm4 xfdesktop4 xfce4-settings xfconf \
+  xfce4-appfinder thunar xfce4-terminal \
+  dbus dbus-x11 xterm fonts-dejavu-core x11-utils psmisc
 
 # Locale
 sed -i 's/^# *en_US.UTF-8 UTF-8/en_US.UTF-8 UTF-8/' /etc/locale.gen
 locale-gen en_US.UTF-8
 
-# Prepare D-Bus (proot-friendly; actual session uses dbus-run-session)
+# D-Bus prep (session uses dbus-run-session)
 dbus-uuidgen --ensure
 mkdir -p /run/dbus
 
-# optional unprivileged user:
+# Optional unprivileged user
 adduser --disabled-password --gecos '' ubuntu || true
 adduser ubuntu sudo || true
 echo 'ubuntu ALL=(ALL) NOPASSWD: ALL' >/etc/sudoers.d/ubuntu
@@ -145,7 +121,7 @@ chmod 0440 /etc/sudoers.d/ubuntu
 
 ---
 
-## 5) Inside Ubuntu (non-root/proot): runtime & env
+## 4) Inside Ubuntu (non-root/proot): runtime & env
 
 ```bash
 ls -l /tmp/.X11-unix     # must show: X1
@@ -163,31 +139,7 @@ export LIBGL_ALWAYS_SOFTWARE=1
 
 ---
 
-## 6) Start XFCE
-
-Preferred:
-
-```bash
-dbus-run-session -- bash -lc 'xfce4-session'
-```
-
-Minimal fallback (no compositor):
-
-```bash
-dbus-run-session sh -lc '
-  xfsettingsd &
-  xfwm4 --compositor=off --vblank=off --sm-client-disable &
-  sleep 1
-  xfce4-panel --disable-wm-check --sm-client-disable &
-  xfdesktop --sm-client-disable &
-  xterm -fa "DejaVu Sans Mono" -fs 12 &
-  wait
-'
-```
-
----
-
-## 7) Quieter / stabler (optional)
+## 5) Quieter / stabler (optional)
 
 ```bash
 cat >>~/.profile <<'EOF'
@@ -207,7 +159,15 @@ xfconf-query -c xfwm4 -p /general/use_compositing -s false
 
 ---
 
-## 8) DPI (optional)
+## 6) Start XFCE
+
+```bash
+dbus-run-session -- bash -lc 'xfce4-session'
+```
+
+---
+
+## 7) DPI (optional)
 
 ```bash
 termux-x11 :1 -legacy-drawing -dpi 160 &
@@ -215,7 +175,7 @@ termux-x11 :1 -legacy-drawing -dpi 160 &
 
 ---
 
-## 9) Restart/stop
+## 8) Restart/stop
 
 ```bash
 # inside Ubuntu
@@ -226,4 +186,16 @@ exit
 ubuntu-rootless-u || true
 am broadcast -a com.termux.x11.ACTION_STOP -p com.termux.x11 || true
 pkill termux-x11 || true
+```
+
+---
+
+## 9) Optional: make UI prettier (install `xfce4-goodies`)
+
+```bash
+export DEBIAN_FRONTEND=noninteractive
+apt-get update
+apt-get install -y xfce4 xfce4-goodies dbus-x11 \
+                   xterm fonts-dejavu-core x11-utils psmisc locales
+locale-gen en_US.UTF-8
 ```

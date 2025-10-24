@@ -2,7 +2,7 @@
 
 This starts XFCE from a rooted chroot and displays it in the Termux:X11 app.
 
-> TL;DR  
+> TL;DR
 > Start ONE Termux:X11 server on :1 (as your Termux user), grant local access with `xhost`, **bind only `/tmp/.X11-unix`** when entering the container, then inside Ubuntu run:
 >
 > ```bash
@@ -95,28 +95,32 @@ chmod +x /usr/sbin/policy-rc.d
 
 apt-get update -y
 
-# Ensure debconf exists first so /usr/sbin/dpkg-preconfigure is present
+# Ensure debconf/dpkg helpers exist BEFORE anything else
 apt-get install -y --no-install-recommends debconf
 
-# Pre-install helpers that many maintainer scripts expect
-apt-get install -y --no-install-recommends \
-  debconf-i18n init-system-helpers perl-base adduser dialog \
-  locales tzdata sgml-base xml-core emacsen-common
+# Common helpers many postinsts need
+apt-get install -y --reinstall --no-install-recommends \
+  debconf-i18n init-system-helpers perl-base adduser dialog locales tzdata
 
-# Desktop bits
+# sgml/xml helpers (provides update-catalog) then settle anything pending
+apt-get install -y --reinstall --no-install-recommends sgml-base xml-core
+dpkg --configure -a || true
+apt-get -o Dpkg::Options::="--force-confnew" -f install
+
+# Desktop bits (CORE) — explicitly include xfce4-session
 apt-get install -y --no-install-recommends \
-  xfce4 xfce4-goodies dbus dbus-x11 \
-  xterm fonts-dejavu-core x11-utils psmisc locales
+  xfce4 xfce4-session xfce4-terminal \
+  dbus dbus-x11 xterm fonts-dejavu-core x11-utils psmisc
 
 # Locale
 sed -i 's/^# *en_US.UTF-8 UTF-8/en_US.UTF-8 UTF-8/' /etc/locale.gen
 locale-gen en_US.UTF-8
 
-# Prepare D-Bus (we'll use dbus-run-session later; no daemon autostart here)
+# D-Bus prep (we'll run per-session later)
 dbus-uuidgen --ensure
 mkdir -p /run/dbus
 
-# optional unprivileged user:
+# Optional unprivileged user
 adduser --disabled-password --gecos '' ubuntu || true
 adduser ubuntu sudo || true
 echo 'ubuntu ALL=(ALL) NOPASSWD: ALL' >/etc/sudoers.d/ubuntu
@@ -128,26 +132,24 @@ chmod 0440 /etc/sudoers.d/ubuntu
 ## 4) Inside Ubuntu (rooted): runtime & env
 
 If you entered ubuntu container before, first unmount container so when you enter again you will mount with X socket bound otherwise the X socket won't be mounted
+
 ```bash
 ubuntu-root-u      # unmount/kill
 ubuntu-root        # enter with X socket bound
 ```
 
 ```bash
-# verify X socket
+# Verify the X socket bound from Termux:X11
 ls -l /tmp/.X11-unix
-[ -S /tmp/.X11-unix/X1 ] || { echo "X socket missing. Exit, start Termux:X11 :1, and re-enter."; exit 1; }
+[ -S /tmp/.X11-unix/X1 ] || { echo "X socket missing (need :1). Exit and re-enter."; exit 1; }
 
-# Mount basic pseudo-filesystems (idempotent; do them INSIDE Ubuntu)
+# Minimal chroot mounts (idempotent, single version)
 export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 mountpoint -q /proc     || mount -t proc   proc   /proc
 mountpoint -q /sys      || mount -t sysfs  sys    /sys
 mkdir -p /dev/pts /dev/shm /run
 mountpoint -q /dev/pts  || mount -t devpts devpts /dev/pts
-chmod 1777 /dev/shm
-mountpoint -q /dev/shm  || mount -t tmpfs -o size=256M tmpfs /dev/shm
-
-# X/ICE runtime dirs
+mountpoint -q /dev/shm  || mount -t tmpfs  -o rw,nosuid,nodev,mode=1777,size=256M tmpfs /dev/shm
 mkdir -p /tmp/.ICE-unix && chmod 1777 /tmp/.ICE-unix
 
 # Per-session runtime
@@ -166,31 +168,7 @@ export LIBGL_ALWAYS_SOFTWARE=1
 
 ---
 
-## 5) Start XFCE
-
-Preferred:
-
-```bash
-dbus-run-session -- bash -lc 'xfce4-session'
-```
-
-Minimal fallback (no compositor) if needed:
-
-```bash
-dbus-run-session sh -lc '
-  xfsettingsd &
-  xfwm4 --compositor=off --vblank=off --sm-client-disable &
-  sleep 1
-  xfce4-panel --disable-wm-check --sm-client-disable &
-  xfdesktop --sm-client-disable &
-  xterm -fa "DejaVu Sans Mono" -fs 12 &
-  wait
-'
-```
-
----
-
-## 6) Quieter / stabler (optional)
+## 5) Quieter / stabler (optional) — run this **before** Start XFCE
 
 ```bash
 cat >>~/.profile <<'EOF'
@@ -204,6 +182,14 @@ export NO_AT_BRIDGE=1
 EOF
 
 xfconf-query -c xfwm4 -p /general/use_compositing -s false
+```
+
+---
+
+## 6) Start XFCE
+
+```bash
+dbus-run-session -- bash -lc 'xfce4-session'
 ```
 
 ---
@@ -227,4 +213,16 @@ exit
 ubuntu-root-u
 am broadcast -a com.termux.x11.ACTION_STOP -p com.termux.x11 || true
 pkill termux-x11 || true
+```
+
+---
+
+## 9) Optional: make UI prettier (install `xfce4-goodies`)
+
+```bash
+export DEBIAN_FRONTEND=noninteractive
+apt-get update
+apt-get install -y xfce4 xfce4-goodies dbus-x11 \
+                   xterm fonts-dejavu-core x11-utils psmisc locales
+locale-gen en_US.UTF-8
 ```

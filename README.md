@@ -29,6 +29,24 @@ curl -fsSL https://raw.githubusercontent.com/Fr4nzz/Termux-Fr4nz/refs/heads/main
 curl -fsSL https://raw.githubusercontent.com/Fr4nzz/Termux-Fr4nz/refs/heads/main/install_rurima.sh | bash
 ```
 
+## Usage (common steps)
+
+```bash
+# Browse images and pull two separate containers for testing
+CON_ROOT="$HOME/containers/ubuntu-root"
+CON_NONROOT="$HOME/containers/ubuntu-rootless"
+rurima lxc list
+rurima lxc pull -o ubuntu -v noble -s "$CON_ROOT"
+rurima lxc pull -o ubuntu -v noble -s "$CON_NONROOT"
+```
+
+Run `termux-setup-storage` once in Termux so the app can mount internal storage.  
+This grants access to `/sdcard`, letting the container see your phone's files when you bind it.
+
+```bash
+termux-setup-storage
+```
+
 ## Browse available rootfs images
 
 ```bash

@@ -22,17 +22,7 @@ pkg install -y pulseaudio xkeyboard-config
 
 ---
 
-## 1) Pull/create the ROOT container (separate path)
-
-```bash
-CONTAINER="$HOME/containers/ubuntu-root"
-rurima lxc list      # browse images
-rurima lxc pull -o ubuntu -v noble -s "$CONTAINER"
-```
-
----
-
-## 2) Start ONE Termux:X11 server on :1
+## 1) Start ONE Termux:X11 server on :1
 
 ```bash
 am broadcast -a com.termux.x11.ACTION_STOP -p com.termux.x11 || true
@@ -47,21 +37,23 @@ sleep 2
 
 DISPLAY=:1 xhost +LOCAL:
 DISPLAY=:1 xhost +SI:localuser:$(id -un)
+DISPLAY=:1 xhost +SI:localuser:root
 
 ls -l "$PREFIX/tmp/.X11-unix"   # MUST show X1 (socket)
 ```
 
 ---
 
-## 3) Replace the “enter” wrapper for ROOT with X11 bind
+## 2) Replace the “enter” wrapper for ROOT with X11 bind
 
 ```bash
 P="$PREFIX/bin"
 cat >"$P/ubuntu-root" <<'SH'
 #!/data/data/com.termux/files/usr/bin/sh
 C="$HOME/containers/ubuntu-root"
+TP="/data/data/com.termux/files/usr/tmp/.X11-unix"
 exec sudo rurima r \
-  -m "$PREFIX/tmp/.X11-unix" /tmp/.X11-unix \
+  -m "$TP" /tmp/.X11-unix \
   -m /sdcard /root/sdcard \
   "$C" "$@"
 SH
@@ -85,7 +77,7 @@ ubuntu-root-u      # unmount/kill
 
 ---
 
-## 4) Inside Ubuntu (first time): packages
+## 3) Inside Ubuntu (first time): packages
 
 ```bash
 export DEBIAN_FRONTEND=noninteractive
@@ -102,7 +94,7 @@ chmod 0440 /etc/sudoers.d/ubuntu
 
 ---
 
-## 5) Inside Ubuntu (rooted): runtime & env
+## 4) Inside Ubuntu (rooted): runtime & env
 
 ```bash
 ls -l /tmp/.X11-unix     # must show: X1
@@ -125,7 +117,7 @@ export LIBGL_ALWAYS_SOFTWARE=1
 
 ---
 
-## 6) Start XFCE
+## 5) Start XFCE
 
 Preferred:
 
@@ -149,7 +141,7 @@ dbus-run-session sh -lc '
 
 ---
 
-## 7) Quieter / stabler (optional)
+## 6) Quieter / stabler (optional)
 
 ```bash
 cat >>~/.profile <<'EOF'
@@ -167,7 +159,7 @@ xfconf-query -c xfwm4 -p /general/use_compositing -s false
 
 ---
 
-## 8) DPI (optional)
+## 7) DPI (optional)
 
 ```bash
 termux-x11 :1 -legacy-drawing -dpi 160 &
@@ -175,7 +167,7 @@ termux-x11 :1 -legacy-drawing -dpi 160 &
 
 ---
 
-## 9) Restart/stop
+## 8) Restart/stop
 
 ```bash
 # inside Ubuntu

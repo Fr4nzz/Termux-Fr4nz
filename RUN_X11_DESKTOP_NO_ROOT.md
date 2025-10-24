@@ -76,8 +76,9 @@ P="$PREFIX/bin"
 cat >"$P/ubuntu-rootless" <<'SH'
 #!/data/data/com.termux/files/usr/bin/sh
 C="$HOME/containers/ubuntu-rootless"
+TP="/data/data/com.termux/files/usr/tmp/.X11-unix"
 exec "$PREFIX/share/daijin/proot_start.sh" -r "$C" \
-  -e "-b $PREFIX/tmp/.X11-unix:/tmp/.X11-unix -b /sdcard:/mnt/sdcard -w /root" \
+  -e "-b $TP:/tmp/.X11-unix -b /sdcard:/mnt/sdcard -w /root" \
   /usr/bin/env -i HOME=/root TERM=xterm-256color \
   PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin \
   /bin/bash -l

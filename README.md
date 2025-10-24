@@ -29,40 +29,37 @@ curl -fsSL https://raw.githubusercontent.com/Fr4nzz/Termux-Fr4nz/refs/heads/main
 curl -fsSL https://raw.githubusercontent.com/Fr4nzz/Termux-Fr4nz/refs/heads/main/install_rurima.sh | bash
 ```
 
-The installer builds from source into `$PREFIX/bin` and also installs `proot` so you can run containers without root.
-
----
-
-## Usage (common steps)
+## Browse available rootfs images
 
 ```bash
-# Create/pull the container as your normal Termux user
-CONTAINER="$HOME/containers/ubuntu-noble"
-rurima lxc list                     # optional: view available images
-rurima lxc pull -o ubuntu -v noble -s "$CONTAINER"
+rurima lxc list
 ```
 
-Run `termux-setup-storage` once in Termux so the app can mount internal storage.  
-This grants access to `/sdcard`, letting the container see your phone's files when you bind it.
+> Pull/create containers in the “Entering container” guides below (root/non-root use **different directories** so you can test both on one device).
 
-```bash
-termux-setup-storage
-```
-
----
-
-## Next steps: choose how to enter the container
+## Entering the container
 
 * **Rooted (recommended if your device is rooted):** [ENTERING_CONTAINER_ROOT.md](./ENTERING_CONTAINER_ROOT.md)
-* **No root (works everywhere, a bit slower with proot):** [ENTERING_CONTAINER_NO_ROOT.md](./ENTERING_CONTAINER_NO_ROOT.md)
+* **No root (works everywhere, proot):** [ENTERING_CONTAINER_NO_ROOT.md](./ENTERING_CONTAINER_NO_ROOT.md)
 
----
+## Run a desktop via Termux:X11
 
-## Install R binaries (inside Ubuntu, any environment)
+* **Rooted (ruri):** [RUN_X11_DESKTOP_ROOT.md](./RUN_X11_DESKTOP_ROOT.md)
+* **No root (daijin/proot):** [RUN_X11_DESKTOP_NO_ROOT.md](./RUN_X11_DESKTOP_NO_ROOT.md)
 
-This works the same in containers, WSL, VMs, or regular PCs. See [INSTALL_R_BINARIES.md](./INSTALL_R_BINARIES.md).
+## Install R binaries (inside Ubuntu)
 
-## To prevent termux from closing use
+See [INSTALL_R_BINARIES.md](./INSTALL_R_BINARIES.md)
+
+## RStudio Server (optional)
+
+See [INSTALL_RStudio_aarch64.md](./INSTALL_RStudio_aarch64.md)
+
+## SSH setup
+
+See [WINDOWS_SSH.md](./WINDOWS_SSH.md)
+
+## Keep Termux alive while testing
 
 ```bash
 adb shell cmd deviceidle whitelist +com.termux

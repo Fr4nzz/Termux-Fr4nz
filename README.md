@@ -1,6 +1,6 @@
 # Termux-Fr4nz
 
-Quick scripts for preparing Termux and installing the ruri/rurima tooling used to manage Linux distributions on Android.
+Tiny scripts for setting up Termux and installing the ruri/rurima tooling to manage Linux distros on Android.
 
 ## SSH setup
 I use this to run commands from my computer. See [WINDOWS_SSH.md](./WINDOWS_SSH.md).
@@ -30,15 +30,6 @@ curl -fsSL https://raw.githubusercontent.com/Fr4nzz/Termux-Fr4nz/refs/heads/main
 ```
 
 ## Usage (common steps)
-
-```bash
-# Browse images and pull two separate containers for testing
-CON_ROOT="$HOME/containers/ubuntu-root"
-CON_NONROOT="$HOME/containers/ubuntu-rootless"
-rurima lxc list
-rurima lxc pull -o ubuntu -v noble -s "$CON_ROOT"
-rurima lxc pull -o ubuntu -v noble -s "$CON_NONROOT"
-```
 
 Run `termux-setup-storage` once in Termux so the app can mount internal storage.  
 This grants access to `/sdcard`, letting the container see your phone's files when you bind it.
@@ -73,12 +64,24 @@ See [INSTALL_R_BINARIES.md](./INSTALL_R_BINARIES.md)
 
 See [INSTALL_RStudio_aarch64.md](./INSTALL_RStudio_aarch64.md)
 
-## SSH setup
+## Keep Termux from being killed
 
-See [WINDOWS_SSH.md](./WINDOWS_SSH.md)
+Android’s Doze/battery optimization can suspend or kill background apps—including Termux. Do the following so long-running tasks (servers, containers, builds) don’t die.
 
-## Keep Termux alive while testing
+From Termux:
+
+```bash
+# Hold a wakelock while your job runs
+termux-wake-lock
+
+# Release when you’re done
+termux-wake-unlock
+```
+
+On a computer with ADB:
 
 ```bash
 adb shell cmd deviceidle whitelist +com.termux
+# Verify:
+adb shell dumpsys deviceidle whitelist
 ```

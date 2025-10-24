@@ -107,11 +107,35 @@ ubuntu-rootless-u   # kill matching proot if needed
 ## 4) Inside Ubuntu (first time): packages
 
 ```bash
+## 4) Inside Ubuntu (first time): packages (proot, no service starts)
+
+# Sane env for maintainer scripts
+export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 export DEBIAN_FRONTEND=noninteractive
-apt-get update
-apt-get install -y xfce4 xfce4-goodies dbus-x11 \
-                   xterm fonts-dejavu-core x11-utils psmisc locales
+
+apt-get update -y
+
+# Ensure debconf exists first so /usr/sbin/dpkg-preconfigure is present
+apt-get install -y --no-install-recommends debconf
+
+# Pre-install helpers that many maintainer scripts expect
+apt-get install -y --no-install-recommends \
+  debconf-i18n init-system-helpers perl-base adduser dialog \
+  locales tzdata sgml-base xml-core emacsen-common
+
+# Desktop bits
+apt-get install -y --no-install-recommends \
+  xfce4 xfce4-goodies dbus dbus-x11 \
+  xterm fonts-dejavu-core x11-utils psmisc locales
+
+# Locale
+sed -i 's/^# *en_US.UTF-8 UTF-8/en_US.UTF-8 UTF-8/' /etc/locale.gen
 locale-gen en_US.UTF-8
+
+# Prepare D-Bus (proot-friendly; actual session uses dbus-run-session)
+dbus-uuidgen --ensure
+mkdir -p /run/dbus
+
 # optional unprivileged user:
 adduser --disabled-password --gecos '' ubuntu || true
 adduser ubuntu sudo || true

@@ -15,7 +15,8 @@ This starts XFCE from a rooted chroot and displays it in the Termux:X11 app.
 
 ```bash
 pkg update -y
-pkg install -y x11-repo termux-x11-nightly xorg-xhost xorg-xdpyinfo
+pkg install -y x11-repo # Install this first to be able to install the following:
+pkg install -y termux-x11-nightly xorg-xhost xorg-xdpyinfo
 # optional while testing:
 pkg install -y pulseaudio xkeyboard-config
 ```
@@ -71,7 +72,7 @@ hash -r
 Usage:
 
 ```bash
-ubuntu-root        # enter with X socket bound
+ubuntu-root        # enter with X socket bound (first have to unmount to mount a new directory)
 ubuntu-root-u      # unmount/kill
 ```
 
@@ -80,11 +81,41 @@ ubuntu-root-u      # unmount/kill
 ## 3) Inside Ubuntu (first time): packages
 
 ```bash
+# Sane env for maintainer scripts
+export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 export DEBIAN_FRONTEND=noninteractive
-apt-get update
-apt-get install -y xfce4 xfce4-goodies dbus-x11 \
-                   xterm fonts-dejavu-core x11-utils psmisc locales
+
+# Block service autostarts during package install inside chroot
+install -d /usr/sbin
+cat >/usr/sbin/policy-rc.d <<'EOF'
+#!/bin/sh
+exit 101
+EOF
+chmod +x /usr/sbin/policy-rc.d
+
+apt-get update -y
+
+# Ensure debconf exists first so /usr/sbin/dpkg-preconfigure is present
+apt-get install -y --no-install-recommends debconf
+
+# Pre-install helpers that many maintainer scripts expect
+apt-get install -y --no-install-recommends \
+  debconf-i18n init-system-helpers perl-base adduser dialog \
+  locales tzdata sgml-base xml-core emacsen-common
+
+# Desktop bits
+apt-get install -y --no-install-recommends \
+  xfce4 xfce4-goodies dbus dbus-x11 \
+  xterm fonts-dejavu-core x11-utils psmisc locales
+
+# Locale
+sed -i 's/^# *en_US.UTF-8 UTF-8/en_US.UTF-8 UTF-8/' /etc/locale.gen
 locale-gen en_US.UTF-8
+
+# Prepare D-Bus (we'll use dbus-run-session later; no daemon autostart here)
+dbus-uuidgen --ensure
+mkdir -p /run/dbus
+
 # optional unprivileged user:
 adduser --disabled-password --gecos '' ubuntu || true
 adduser ubuntu sudo || true
@@ -96,16 +127,34 @@ chmod 0440 /etc/sudoers.d/ubuntu
 
 ## 4) Inside Ubuntu (rooted): runtime & env
 
+If you entered ubuntu container before, first unmount container so when you enter again you will mount with X socket bound otherwise the X socket won't be mounted
 ```bash
-ls -l /tmp/.X11-unix     # must show: X1
+ubuntu-root-u      # unmount/kill
+ubuntu-root        # enter with X socket bound
+```
 
+```bash
+# verify X socket
+ls -l /tmp/.X11-unix
+[ -S /tmp/.X11-unix/X1 ] || { echo "X socket missing. Exit, start Termux:X11 :1, and re-enter."; exit 1; }
+
+# Mount basic pseudo-filesystems (idempotent; do them INSIDE Ubuntu)
+export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+mountpoint -q /proc     || mount -t proc   proc   /proc
+mountpoint -q /sys      || mount -t sysfs  sys    /sys
+mkdir -p /dev/pts /dev/shm /run
+mountpoint -q /dev/pts  || mount -t devpts devpts /dev/pts
+chmod 1777 /dev/shm
+mountpoint -q /dev/shm  || mount -t tmpfs -o size=256M tmpfs /dev/shm
+
+# X/ICE runtime dirs
 mkdir -p /tmp/.ICE-unix && chmod 1777 /tmp/.ICE-unix
-mkdir -p /dev/shm && chmod 1777 /dev/shm
-mount | grep ' /dev/shm ' >/dev/null || mount -t tmpfs -o size=256M tmpfs /dev/shm
 
+# Per-session runtime
 mkdir -p /run/user/0 && chmod 700 /run/user/0
 export XDG_RUNTIME_DIR=/run/user/0
 
+# Session env
 export DISPLAY=:1
 export LANG=en_US.UTF-8 LC_ALL=en_US.UTF-8
 export GDK_BACKEND=x11

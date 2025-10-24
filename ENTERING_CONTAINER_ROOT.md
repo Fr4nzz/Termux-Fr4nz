@@ -7,7 +7,6 @@ If you don’t have root, see [ENTERING_CONTAINER_NO_ROOT.md](./ENTERING_CONTAIN
 
 ```bash
 CONTAINER="$HOME/containers/ubuntu-root"
-rurima lxc list
 rurima lxc pull -o ubuntu -v noble -s "$CONTAINER"
 ```
 

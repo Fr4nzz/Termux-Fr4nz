@@ -61,3 +61,9 @@ termux-setup-storage
 ## Install R binaries (inside Ubuntu, any environment)
 
 This works the same in containers, WSL, VMs, or regular PCs. See [INSTALL_R_BINARIES.md](./INSTALL_R_BINARIES.md).
+
+## To prevent termux from closing use
+
+```bash
+adb shell cmd deviceidle whitelist +com.termux
+```

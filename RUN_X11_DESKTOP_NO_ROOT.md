@@ -41,6 +41,8 @@ DISPLAY=:1 xhost +SI:localuser:$(id -un)
 ls -l "$PREFIX/tmp/.X11-unix"
 ```
 
+If you see **“Make sure an X server isn’t already running (EE)”**, close Termux, **Force stop** Termux, then try again from step 1.
+
 ---
 
 ## 2) Replace the “enter” wrapper for NON-ROOT with X11 bind
@@ -51,11 +53,19 @@ cat >"$P/ubuntu-rootless" <<'SH'
 #!/data/data/com.termux/files/usr/bin/sh
 C="$HOME/containers/ubuntu-rootless"
 TP="/data/data/com.termux/files/usr/tmp/.X11-unix"
-exec "$PREFIX/share/daijin/proot_start.sh" -r "$C" \
-  -e "-b $TP:/tmp/.X11-unix -b /sdcard:/mnt/sdcard -w /root" \
-  /usr/bin/env -i HOME=/root TERM=xterm-256color \
-  PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin \
-  /bin/bash -l
+if [ "$#" -gt 0 ]; then
+  exec "$PREFIX/share/daijin/proot_start.sh" -r "$C" \
+    -e "-b $TP:/tmp/.X11-unix -b /sdcard:/mnt/sdcard -w /root" \
+    /usr/bin/env -i HOME=/root TERM=xterm-256color \
+    PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin \
+    /bin/bash -lc "$*"
+else
+  exec "$PREFIX/share/daijin/proot_start.sh" -r "$C" \
+    -e "-b $TP:/tmp/.X11-unix -b /sdcard:/mnt/sdcard -w /root" \
+    /usr/bin/env -i HOME=/root TERM=xterm-256color \
+    PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin \
+    /bin/bash -l
+fi
 SH
 chmod 0755 "$P/ubuntu-rootless"
 
@@ -72,8 +82,9 @@ hash -r
 Usage:
 
 ```bash
-ubuntu-rootless     # enter with X socket bound
-ubuntu-rootless-u   # kill matching proot if needed
+ubuntu-rootless          # enter interactively with X socket bound
+ubuntu-rootless 'echo hi'  # run a command non-interactively (now supported)
+ubuntu-rootless-u        # kill matching proot if needed
 ```
 
 ---
@@ -81,27 +92,35 @@ ubuntu-rootless-u   # kill matching proot if needed
 ## 3) Inside Ubuntu (first time): packages
 
 ```bash
+# Sane env for maintainer scripts
 export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 export DEBIAN_FRONTEND=noninteractive
 
+# Block service autostarts during package install (harmless in proot, prevents noisy postinsts)
+install -d /usr/sbin
+cat >/usr/sbin/policy-rc.d <<'EOF'
+#!/bin/sh
+exit 101
+EOF
+chmod +x /usr/sbin/policy-rc.d
+
 apt-get update -y
 
-# Ensure debconf first
+# Ensure debconf/dpkg helpers exist BEFORE anything else
 apt-get install -y --no-install-recommends debconf
 
 # Common helpers many postinsts need
 apt-get install -y --reinstall --no-install-recommends \
   debconf-i18n init-system-helpers perl-base adduser dialog locales tzdata
 
-# sgml/xml helpers and settle anything pending
+# sgml/xml helpers (provides update-catalog) then settle anything pending
 apt-get install -y --reinstall --no-install-recommends sgml-base xml-core
 dpkg --configure -a || true
 apt-get -o Dpkg::Options::="--force-confnew" -f install
 
-# Desktop bits (explicit; avoid xfce4-goodies)
+# Desktop bits (CORE) — explicitly include xfce4-session
 apt-get install -y --no-install-recommends \
-  xfce4-session xfce4-panel xfwm4 xfdesktop4 xfce4-settings xfconf \
-  xfce4-appfinder thunar xfce4-terminal \
+  xfce4 xfce4-session xfce4-terminal \
   dbus dbus-x11 xterm fonts-dejavu-core x11-utils psmisc
 
 # Locale
@@ -130,6 +149,7 @@ ls -l /tmp/.X11-unix     # must show: X1
 mkdir -p "$HOME/.run" && chmod 700 "$HOME/.run"
 export XDG_RUNTIME_DIR="$HOME/.run"
 
+# Session env
 export DISPLAY=:1
 export LANG=en_US.UTF-8 LC_ALL=en_US.UTF-8
 export GDK_BACKEND=x11
@@ -137,9 +157,11 @@ export QT_QPA_PLATFORM=xcb
 export LIBGL_ALWAYS_SOFTWARE=1
 ```
 
+(If you use the `ubuntu` user, `su - ubuntu` and set the same env.)
+
 ---
 
-## 5) Quieter / stabler (optional)
+## 5) Quieter / stabler (optional) — run this **before** Start XFCE
 
 ```bash
 cat >>~/.profile <<'EOF'
@@ -199,3 +221,72 @@ apt-get install -y xfce4 xfce4-goodies dbus-x11 \
                    xterm fonts-dejavu-core x11-utils psmisc locales
 locale-gen en_US.UTF-8
 ```
+
+---
+
+## 10) Quick wrappers (runtime only)
+
+Create once in Termux; then you’ll use only the `*-start` / `*-stop` commands each time.
+
+```bash
+# x11-up: ensure Termux:X11 :1 is running and access is granted
+cat >"$PREFIX/bin/x11-up" <<'SH'
+#!/data/data/com.termux/files/usr/bin/sh
+set -e
+P="$PREFIX"; S="$P/tmp/.X11-unix"
+[ -S "$S/X1" ] || {
+  am broadcast -a com.termux.x11.ACTION_STOP -p com.termux.x11 >/dev/null 2>&1 || true
+  pkill termux-x11 >/dev/null 2>&1 || true
+  rm -rf "$S"; mkdir -p "$S"
+  TMPDIR="$P/tmp" termux-x11 :1 -legacy-drawing >/dev/null 2>&1 &
+  am start -n com.termux.x11/com.termux.x11.MainActivity >/dev/null 2>&1
+  sleep 2
+}
+DISPLAY=:1 xhost +LOCAL: >/dev/null
+DISPLAY=:1 xhost +SI:localuser:$(id -un) >/dev/null
+ls -l "$S"
+SH
+chmod 0755 "$PREFIX/bin/x11-up"
+
+# x11-down: stop Termux:X11
+cat >"$PREFIX/bin/x11-down" <<'SH'
+#!/data/data/com.termux/files/usr/bin/sh
+am broadcast -a com.termux.x11.ACTION_STOP -p com.termux.x11 >/dev/null 2>&1 || true
+pkill termux-x11 >/dev/null 2>&1 || true
+SH
+chmod 0755 "$PREFIX/bin/x11-down"
+
+# xfce4-rootless-start: start X11, enter proot, prep runtime, launch XFCE
+cat >"$PREFIX/bin/xfce4-rootless-start" <<'SH'
+#!/data/data/com.termux/files/usr/bin/sh
+x11-up >/dev/null 2>&1 || true
+ubuntu-rootless '
+export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+export DISPLAY=:1 LANG=en_US.UTF-8 LC_ALL=en_US.UTF-8 GDK_BACKEND=x11 QT_QPA_PLATFORM=xcb LIBGL_ALWAYS_SOFTWARE=1
+mkdir -p /tmp/.ICE-unix && chmod 1777 /tmp/.ICE-unix
+mkdir -p "$HOME/.run" && chmod 700 "$HOME/.run"
+export XDG_RUNTIME_DIR="$HOME/.run"
+command -v xfce4-session >/dev/null || { echo "xfce4-session not installed (run Step 3)."; exit 1; }
+exec dbus-run-session -- bash -lc "xfce4-session"
+'
+SH
+chmod 0755 "$PREFIX/bin/xfce4-rootless-start"
+
+# xfce4-rootless-stop: gracefully stop XFCE, stop proot, stop X11
+cat >"$PREFIX/bin/xfce4-rootless-stop" <<'SH'
+#!/data/data/com.termux/files/usr/bin/sh
+ubuntu-rootless 'killall -q xfce4-session xfwm4 xfce4-panel xfdesktop xfsettingsd || true'
+ubuntu-rootless-u || true
+x11-down || true
+SH
+chmod 0755 "$PREFIX/bin/xfce4-rootless-stop"
+```
+
+### Usage
+
+```bash
+xfce4-rootless-start   # start/enter and launch XFCE (proot)
+xfce4-rootless-stop    # stop XFCE, stop proot, stop X11
+```
+
+If it fails, try force-closing Termux and run `xfce4-rootless-start` again.

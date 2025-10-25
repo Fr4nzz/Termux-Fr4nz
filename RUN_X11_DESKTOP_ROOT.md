@@ -43,6 +43,8 @@ DISPLAY=:1 xhost +SI:localuser:root
 ls -l "$PREFIX/tmp/.X11-unix"   # MUST show X1 (socket)
 ```
 
+If you encounter Make sure an X server isn't already running(EE) error, close Termux, then “Force stop” Termux and try again from step 1
+
 ---
 
 ## 2) Replace the “enter” wrapper for ROOT with X11 bind
@@ -141,7 +143,7 @@ ubuntu-root        # enter with X socket bound
 ```bash
 # Verify the X socket bound from Termux:X11
 ls -l /tmp/.X11-unix
-[ -S /tmp/.X11-unix/X1 ] || { echo "X socket missing (need :1). Exit and re-enter."; exit 1; }
+[ -S /tmp/.X11-unix/X1 ] || echo "X socket missing (need :1). Exit and re-enter."
 
 # Minimal chroot mounts (idempotent, single version)
 export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
@@ -226,3 +228,79 @@ apt-get install -y xfce4 xfce4-goodies dbus-x11 \
                    xterm fonts-dejavu-core x11-utils psmisc locales
 locale-gen en_US.UTF-8
 ```
+
+## 10) Quick wrappers (runtime only)
+
+Create once in Termux; then you’ll use only the `*-start` / `*-stop` commands each time.
+
+```bash
+# x11-up: ensure Termux:X11 :1 is running and access is granted
+cat >"$PREFIX/bin/x11-up" <<'SH'
+#!/data/data/com.termux/files/usr/bin/sh
+set -e
+P="$PREFIX"; S="$P/tmp/.X11-unix"
+[ -S "$S/X1" ] || {
+  am broadcast -a com.termux.x11.ACTION_STOP -p com.termux.x11 >/dev/null 2>&1 || true
+  pkill termux-x11 >/dev/null 2>&1 || true
+  rm -rf "$S"; mkdir -p "$S"
+  TMPDIR="$P/tmp" termux-x11 :1 -legacy-drawing >/dev/null 2>&1 &
+  am start -n com.termux.x11/com.termux.x11.MainActivity >/dev/null 2>&1
+  sleep 2
+}
+DISPLAY=:1 xhost +LOCAL: >/dev/null
+DISPLAY=:1 xhost +SI:localuser:$(id -un) >/dev/null
+DISPLAY=:1 xhost +SI:localuser:root >/dev/null 2>&1 || true
+ls -l "$S"
+SH
+chmod 0755 "$PREFIX/bin/x11-up"
+
+# x11-down: stop Termux:X11
+cat >"$PREFIX/bin/x11-down" <<'SH'
+#!/data/data/com.termux/files/usr/bin/sh
+am broadcast -a com.termux.x11.ACTION_STOP -p com.termux.x11 >/dev/null 2>&1 || true
+pkill termux-x11 >/dev/null 2>&1 || true
+SH
+chmod 0755 "$PREFIX/bin/x11-down"
+
+# xfce4-root-start: start X11, enter container, prep runtime, launch XFCE
+cat >"$PREFIX/bin/xfce4-root-start" <<'SH'
+#!/data/data/com.termux/files/usr/bin/sh
+x11-up >/dev/null 2>&1 || true
+ubuntu-root /bin/bash -lc '
+export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+export DISPLAY=:1 LANG=en_US.UTF-8 LC_ALL=en_US.UTF-8 GDK_BACKEND=x11 QT_QPA_PLATFORM=xcb LIBGL_ALWAYS_SOFTWARE=1
+mountpoint -q /proc || mount -t proc proc /proc
+mountpoint -q /sys  || mount -t sysfs sys /sys
+mkdir -p /dev/pts /dev/shm /run /tmp/.ICE-unix /run/user/0
+mountpoint -q /dev/pts || mount -t devpts devpts /dev/pts
+mountpoint -q /dev/shm || mount -t tmpfs -o rw,nosuid,nodev,mode=1777,size=256M tmpfs /dev/shm
+chmod 1777 /tmp/.ICE-unix
+chmod 700  /run/user/0
+export XDG_RUNTIME_DIR=/run/user/0
+command -v xfce4-session >/dev/null || { echo "xfce4-session not installed (run Step 3)."; exit 1; }
+exec dbus-run-session -- bash -lc "xfce4-session"
+'
+SH
+chmod 0755 "$PREFIX/bin/xfce4-root-start"
+
+# xfce4-root-stop: gracefully stop XFCE, unmount container, stop X11
+cat >"$PREFIX/bin/xfce4-root-stop" <<'SH'
+#!/data/data/com.termux/files/usr/bin/sh
+ubuntu-root /bin/bash -lc 'killall -q xfce4-session xfwm4 xfce4-panel xfdesktop xfsettingsd || true'
+ubuntu-root-u || true
+x11-down || true
+SH
+chmod 0755 "$PREFIX/bin/xfce4-root-stop"
+```
+
+### Usage
+
+```bash
+xfce4-root-start   # start/enter and launch XFCE
+```
+
+```bash
+xfce4-root-stop    # stop XFCE, unmount container, stop X11
+```
+
+If it fails try force closing termux and try again running `xfce4-root-start`

@@ -290,3 +290,18 @@ xfce4-rootless-stop    # stop XFCE, stop proot, stop X11
 ```
 
 If it fails, try force-closing Termux and run `xfce4-rootless-start` again.
+
+---
+
+## 11) App installs, Firefox-without-snap, VS Code, Desktop icons
+
+For things like:
+* Synaptic GUI package manager,
+* enabling `universe`/`multiverse` so you see more software,
+* Firefox from Mozilla’s APT repo instead of Snap (Snap doesn't work in proot either),
+* Visual Studio Code from Microsoft’s repo,
+* adding launchers to the XFCE Desktop using a helper script (`desktopify`),
+
+see `INSTALL_APP_MANAGERS.md`.
+
+That file is shared by both the rooted and the rootless setups so we don't duplicate steps.

@@ -184,7 +184,7 @@ You only need to run the `desktopify` command again after you install a new app 
 ---
 ## 8) RStudio Desktop (experimental arm64 GUI)
 
-RStudio Desktop is the full IDE window (not the web server). This is optional and still experimental on ARM64, but it can run inside the XFCE session you already launch with `xfce4-user-start` (rooted) or `xfce4-rootless-start` (proot).
+RStudio Desktop is the full IDE window (not the web server). This is optional and still experimental on ARM64, but it can run inside the XFCE session you already launch with `xfce4-chroot-start` (rooted) or `xfce4-proot-start` (proot).
 
 ### Install (inside the Ubuntu container, as root)
 

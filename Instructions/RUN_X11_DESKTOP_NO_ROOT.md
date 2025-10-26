@@ -155,7 +155,7 @@ killall -q xfce4-session xfwm4 xfce4-panel xfdesktop xfsettingsd || true
 exit
 
 # Termux
-ubuntu-rootless-u || true
+ubuntu-proot-u || true
 am broadcast -a com.termux.x11.ACTION_STOP -p com.termux.x11 || true
 pkill termux-x11 || true
 ```
@@ -206,11 +206,11 @@ pkill termux-x11 >/dev/null 2>&1 || true
 SH
 chmod 0755 "$PREFIX/bin/x11-down"
 
-# xfce4-rootless-start: start X11, enter proot, prep runtime, launch XFCE
-cat >"$PREFIX/bin/xfce4-rootless-start" <<'SH'
+# xfce4-proot-start: start X11, enter proot, prep runtime, launch XFCE
+cat >"$PREFIX/bin/xfce4-proot-start" <<'SH'
 #!/data/data/com.termux/files/usr/bin/sh
 x11-up >/dev/null 2>&1 || true
-ubuntu-rootless '
+ubuntu-proot '
 export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 export DISPLAY=:1 LANG=en_US.UTF-8 LC_ALL=en_US.UTF-8 GDK_BACKEND=x11 QT_QPA_PLATFORM=xcb LIBGL_ALWAYS_SOFTWARE=1
 mkdir -p /tmp/.ICE-unix && chmod 1777 /tmp/.ICE-unix
@@ -220,26 +220,26 @@ command -v xfce4-session >/dev/null || { echo "xfce4-session not installed (run 
 exec dbus-run-session -- bash -lc "xfce4-session"
 '
 SH
-chmod 0755 "$PREFIX/bin/xfce4-rootless-start"
+chmod 0755 "$PREFIX/bin/xfce4-proot-start"
 
-# xfce4-rootless-stop: gracefully stop XFCE, stop proot, stop X11
-cat >"$PREFIX/bin/xfce4-rootless-stop" <<'SH'
+# xfce4-proot-stop: gracefully stop XFCE, stop proot, stop X11
+cat >"$PREFIX/bin/xfce4-proot-stop" <<'SH'
 #!/data/data/com.termux/files/usr/bin/sh
-ubuntu-rootless 'killall -q xfce4-session xfwm4 xfce4-panel xfdesktop xfsettingsd || true'
-ubuntu-rootless-u || true
+ubuntu-proot 'killall -q xfce4-session xfwm4 xfce4-panel xfdesktop xfsettingsd || true'
+ubuntu-proot-u || true
 x11-down || true
 SH
-chmod 0755 "$PREFIX/bin/xfce4-rootless-stop"
+chmod 0755 "$PREFIX/bin/xfce4-proot-stop"
 ```
 
 ### Usage
 
 ```bash
-xfce4-rootless-start   # start/enter and launch XFCE (proot)
-xfce4-rootless-stop    # stop XFCE, stop proot, stop X11
+xfce4-proot-start   # start/enter and launch XFCE (proot)
+xfce4-proot-stop    # stop XFCE, stop proot, stop X11
 ```
 
-If it fails, try force-closing Termux and run `xfce4-rootless-start` again.
+If it fails, try force-closing Termux and run `xfce4-proot-start` again.
 
 ---
 

@@ -15,7 +15,7 @@ sudo apt-get update -y
 sudo apt-get install -y --no-install-recommends debconf debconf-i18n gnupg ca-certificates curl
 
 # Install R + bspm/r2u setup (script will sudo itself if needed)
-curl -fsSL https://raw.githubusercontent.com/Fr4nzz/Termux-Fr4nz/refs/heads/main/setup-r-binaries.sh | sudo bash
+curl -fsSL https://raw.githubusercontent.com/Fr4nzz/Termux-Fr4nz/refs/heads/main/container-scripts/install_r_binaries.sh | sudo bash
 ```
 
 After this:

@@ -12,7 +12,7 @@ pkg install -y tsu
 ## Get an Ubuntu rootfs (separate path for ROOT testing)
 
 ```bash
-CONTAINER="$HOME/containers/ubuntu-root"
+CONTAINER="$HOME/containers/ubuntu-chroot"
 rurima lxc pull -o ubuntu -v noble -s "$CONTAINER"
 ```
 
@@ -20,7 +20,7 @@ rurima lxc pull -o ubuntu -v noble -s "$CONTAINER"
 
 ```bash
 # Set your ROOTED container path (matches your earlier step)
-CONTAINER="$HOME/containers/ubuntu-root"
+CONTAINER="$HOME/containers/ubuntu-chroot"
 
 # Ask for a desktop username (default: legend)
 read -rp "Desktop username [legend]: " U; U="${U:-legend}"
@@ -62,20 +62,20 @@ You can enter as **root** (maintenance) or as **your desktop user** (daily use).
 
 **Root shell:**
 ```bash
-sudo rurima r "$HOME/containers/ubuntu-root"
+sudo rurima r "$HOME/containers/ubuntu-chroot"
 ```
 
 **Login directly as your desktop user (recommended):**
 
 ```bash
-U="$(cat "$HOME/containers/ubuntu-root/etc/ruri/user")"
-sudo rurima r -E "$U" "$HOME/containers/ubuntu-root"
+U="$(cat "$HOME/containers/ubuntu-chroot/etc/ruri/user")"
+sudo rurima r -E "$U" "$HOME/containers/ubuntu-chroot"
 ```
 
 **Bind /sdcard example (root shell):**
 
 ```bash
-sudo rurima r -m /sdcard /root/sdcard "$HOME/containers/ubuntu-root"
+sudo rurima r -m /sdcard /root/sdcard "$HOME/containers/ubuntu-chroot"
 ```
 
 ````
@@ -84,8 +84,8 @@ sudo rurima r -m /sdcard /root/sdcard "$HOME/containers/ubuntu-root"
 
 We install two Termux commands into `$PREFIX/bin`:
 
-- `ubuntu-root`: enter the rooted Ubuntu container.
-- `ubuntu-root-u`: unmount/kill it.
+- `ubuntu-chroot`: enter the rooted Ubuntu container.
+- `ubuntu-chroot-u`: unmount/kill it.
 
 These wrappers always:
 - bind `/sdcard` into the container,
@@ -95,10 +95,10 @@ That means you can run CLI stuff, RStudio Server, or later launch XFCE/X11, all 
 
 ```bash
 P=/data/data/com.termux/files/usr
-cat >"$P/bin/ubuntu-root" <<'SH'
+cat >"$P/bin/ubuntu-chroot" <<'SH'
 #!/data/data/com.termux/files/usr/bin/sh
 # Enter the rooted Ubuntu container as the saved desktop user.
-C="$HOME/containers/ubuntu-root"
+C="$HOME/containers/ubuntu-chroot"
 TP="/data/data/com.termux/files/usr/tmp/.X11-unix"
 U="$(cat "$C/etc/ruri/user")"
 
@@ -108,21 +108,21 @@ exec sudo rurima r \
   -E "$U" \
   "$C" "$@"
 SH
-chmod 0755 "$P/bin/ubuntu-root"
+chmod 0755 "$P/bin/ubuntu-chroot"
 
-cat >"$P/bin/ubuntu-root-u" <<'SH'
+cat >"$P/bin/ubuntu-chroot-u" <<'SH'
 #!/data/data/com.termux/files/usr/bin/sh
-C="$HOME/containers/ubuntu-root"
+C="$HOME/containers/ubuntu-chroot"
 exec /data/data/com.termux/files/usr/bin/sudo /data/data/com.termux/files/usr/bin/rurima r -U "$C"
 SH
-chmod 0755 "$P/bin/ubuntu-root-u"
+chmod 0755 "$P/bin/ubuntu-chroot-u"
 hash -r
 ```
 
 Usage:
 
 ```bash
-ubuntu-root
-ubuntu-root /bin/bash -l
-ubuntu-root-u
+ubuntu-chroot
+ubuntu-chroot /bin/bash -l
+ubuntu-chroot-u
 ```

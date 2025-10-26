@@ -3,10 +3,10 @@
 Tiny scripts for setting up Termux and installing the ruri/rurima tooling to manage Linux distros on Android.
 
 ## SSH setup
-I use this to run commands from my computer. See [WINDOWS_SSH.md](./WINDOWS_SSH.md).
+I use this to run commands from my computer. See [WINDOWS_SSH.md](./Instructions/WINDOWS_SSH.md).
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/Fr4nzz/Termux-Fr4nz/refs/heads/main/setup_ssh.sh | bash
+curl -fsSL https://raw.githubusercontent.com/Fr4nzz/Termux-Fr4nz/refs/heads/main/termux-scripts/setup_ssh.sh | bash
 ```
 
 ## Set SSH password
@@ -20,13 +20,46 @@ passwd
 This makes Termux predict commands and look nicer.
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/Fr4nzz/Termux-Fr4nz/refs/heads/main/install_zsh.sh | bash
+curl -fsSL https://raw.githubusercontent.com/Fr4nzz/Termux-Fr4nz/refs/heads/main/termux-scripts/install_zsh.sh | bash
 ```
 
 ## Install rurima (bundled ruri)
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/Fr4nzz/Termux-Fr4nz/refs/heads/main/install_rurima.sh | bash
+curl -fsSL https://raw.githubusercontent.com/Fr4nzz/Termux-Fr4nz/refs/heads/main/termux-scripts/install_rurima.sh | bash
+
+## Quick start (UNATTENDED)
+
+> Run these in **Termux**. Default desktop user is `legend`.  
+> To change it: `export DESKTOP_USER=<name>` before running.
+
+**A) Containers**
+- Rooted container:  
+  `curl -fsSL https://raw.githubusercontent.com/Fr4nzz/Termux-Fr4nz/refs/heads/main/termux-scripts/setup_rooted_container_unattended.sh | bash`
+- Rootless container (proot + Daijin):  
+  `curl -fsSL https://raw.githubusercontent.com/Fr4nzz/Termux-Fr4nz/refs/heads/main/termux-scripts/setup_rootless_container_unattended.sh | bash`
+
+**B) Desktop (Termux:X11 + XFCE)**
+- Rooted:  
+  `curl -fsSL https://raw.githubusercontent.com/Fr4nzz/Termux-Fr4nz/refs/heads/main/termux-scripts/install_x11_desktop_root_unattended.sh | bash`
+- Rootless:  
+  `curl -fsSL https://raw.githubusercontent.com/Fr4nzz/Termux-Fr4nz/refs/heads/main/termux-scripts/install_x11_desktop_rootless_unattended.sh | bash`
+
+**C) R / RStudio / Apps**
+- Install R binaries:  
+  `curl -fsSL https://raw.githubusercontent.com/Fr4nzz/Termux-Fr4nz/refs/heads/main/termux-scripts/install_r_binaries_unattended.sh | bash`
+- RStudio Server (also creates Termux wrappers; installs R first if missing):  
+  `curl -fsSL https://raw.githubusercontent.com/Fr4nzz/Termux-Fr4nz/refs/heads/main/termux-scripts/install_rstudio_server_unattended.sh | bash`
+- App manager (Synaptic + enable universe/multiverse):  
+  `curl -fsSL https://raw.githubusercontent.com/Fr4nzz/Termux-Fr4nz/refs/heads/main/termux-scripts/install_app_manager_unattended.sh | bash`
+- Desktopify helper:  
+  `curl -fsSL https://raw.githubusercontent.com/Fr4nzz/Termux-Fr4nz/refs/heads/main/termux-scripts/install_desktopify_unattended.sh | bash`
+- Firefox (adds Desktop icon):  
+  `curl -fsSL https://raw.githubusercontent.com/Fr4nzz/Termux-Fr4nz/refs/heads/main/termux-scripts/install_firefox_unattended.sh | bash`
+- VS Code (adds Desktop icon):  
+  `curl -fsSL https://raw.githubusercontent.com/Fr4nzz/Termux-Fr4nz/refs/heads/main/termux-scripts/install_vscode_unattended.sh | bash`
+- RStudio Desktop (installs R if missing; adds Desktop icon):  
+  `curl -fsSL https://raw.githubusercontent.com/Fr4nzz/Termux-Fr4nz/refs/heads/main/termux-scripts/install_rstudio_desktop_unattended.sh | bash`
 ```
 
 ## Usage (common steps)
@@ -46,29 +79,19 @@ rurima lxc list
 
 > Pull/create containers in the “Entering container” guides below (root/non-root use **different directories** so you can test both on one device).
 
-## Entering the container
+## Entering the container (manual guides)
+* **Rooted (recommended if your device is rooted):** [ENTERING_CONTAINER_ROOT.md](./Instructions/ENTERING_CONTAINER_ROOT.md)
+* **No root (works everywhere, proot):** [ENTERING_CONTAINER_NO_ROOT.md](./Instructions/ENTERING_CONTAINER_NO_ROOT.md)
 
-* **Rooted (recommended if your device is rooted):** [ENTERING_CONTAINER_ROOT.md](./ENTERING_CONTAINER_ROOT.md)
-* **No root (works everywhere, proot):** [ENTERING_CONTAINER_NO_ROOT.md](./ENTERING_CONTAINER_NO_ROOT.md)
+## Run a desktop via Termux:X11 (manual guides)
+* **Rooted (ruri):** [RUN_X11_DESKTOP_ROOT.md](./Instructions/RUN_X11_DESKTOP_ROOT.md)
+* **No root (daijin/proot):** [RUN_X11_DESKTOP_NO_ROOT.md](./Instructions/RUN_X11_DESKTOP_NO_ROOT.md)
 
-## Run a desktop via Termux:X11
+## Install R binaries (manual guide)
+[INSTALL_R_BINARIES.md](./Instructions/INSTALL_R_BINARIES.md)
 
-* **Rooted (ruri):** [RUN_X11_DESKTOP_ROOT.md](./RUN_X11_DESKTOP_ROOT.md)
-* **No root (daijin/proot):** [RUN_X11_DESKTOP_NO_ROOT.md](./RUN_X11_DESKTOP_NO_ROOT.md)
-
-## Install R binaries (inside Ubuntu)
-
-See [INSTALL_R_BINARIES.md](./INSTALL_R_BINARIES.md)
-
-## RStudio Server (optional)
-
-See [INSTALL_RStudio_aarch64.md](./INSTALL_RStudio_aarch64.md).
-
-That file now also shows how to:
-- install RStudio Server on aarch64 Ubuntu,
-- start it on port 8787 with `rstudio-rootless-start` / `rstudio-root-start`,
-- stop it with `rstudio-rootless-stop` / `rstudio-root-stop`,
-- and open it from Chrome/Firefox on the phone.
+## RStudio Server (manual guide)
+[INSTALL_RStudio_aarch64.md](./Instructions/INSTALL_RStudio_aarch64.md)
 
 ## Keep Termux from being killed
 

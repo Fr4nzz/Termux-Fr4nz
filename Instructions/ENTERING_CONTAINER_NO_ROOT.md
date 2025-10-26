@@ -24,7 +24,7 @@ Daijin provides helpers like `register.sh` and a proot starter `proot_start.sh` 
 Use a separate path for rootless testing:
 
 ```bash
-CONTAINER="$HOME/containers/ubuntu-rootless"
+CONTAINER="$HOME/containers/ubuntu-proot"
 rurima lxc list
 rurima lxc pull -o ubuntu -v noble -s "$CONTAINER"
 ```
@@ -33,9 +33,9 @@ Register with Daijin:
 
 ```bash
 /data/data/com.termux/files/usr/share/daijin/register.sh  # or run `daijin` and choose [4] register
-# Path:    /data/data/com.termux/files/home/containers/ubuntu-rootless
+# Path:    /data/data/com.termux/files/home/containers/ubuntu-proot
 # Backend: proot
-# Name:    ubuntu-rootless
+# Name:    ubuntu-proot
 ```
 
 The script asks for a name, defaults to **proot** for non-root usage, and writes a config in `$PREFIX/var/daijin/containers/<name>.conf`.
@@ -46,7 +46,7 @@ The script asks for a name, defaults to **proot** for non-root usage, and writes
 
 ```bash
 # Set your ROOTLESS container path (matches your earlier step)
-CONTAINER="$HOME/containers/ubuntu-rootless"
+CONTAINER="$HOME/containers/ubuntu-proot"
 
 # Ask for a desktop username (default: legend)
 read -rp "Desktop username [legend]: " U; U="${U:-legend}"
@@ -89,7 +89,7 @@ echo "   $PREFIX/share/daijin/proot_start.sh -r \"$CONTAINER\" /usr/bin/passwd '
 
 ## 4) Start the container
 
-### Option A — `ubuntu-rootless` helper (X11-ready + storage bind)
+### Option A — `ubuntu-proot` helper (X11-ready + storage bind)
 
 This wrapper does three things up front:
 - binds `/sdcard` into the container,
@@ -103,11 +103,11 @@ It supports both interactive shells and one-off commands.
 
 ```bash
 P=/data/data/com.termux/files/usr
-cat >"$P/bin/ubuntu-rootless" <<'SH'
+cat >"$P/bin/ubuntu-proot" <<'SH'
 #!/data/data/com.termux/files/usr/bin/sh
 # Enter the rootless Ubuntu container (daijin/proot) as the saved desktop user.
 : "${PREFIX:=/data/data/com.termux/files/usr}"
-C="/data/data/com.termux/files/home/containers/ubuntu-rootless"
+C="/data/data/com.termux/files/home/containers/ubuntu-proot"
 TP="/data/data/com.termux/files/usr/tmp/.X11-unix"
 U="$(cat "$C/etc/ruri/user")"
 
@@ -123,22 +123,22 @@ else
     /bin/su - "$U"
 fi
 SH
-chmod 0755 "$P/bin/ubuntu-rootless"
+chmod 0755 "$P/bin/ubuntu-proot"
 hash -r
 ```
 
 Usage:
 
 ```bash
-ubuntu-rootless               # default login shell in the container
-ubuntu-rootless /bin/bash -lc 'uname -a'  # run a one-off command
+ubuntu-proot               # default login shell in the container
+ubuntu-proot /bin/bash -lc 'uname -a'  # run a one-off command
 ```
 
 ### Option B — via Daijin’s TUI
 
 ```bash
 daijin
-# Choose “[2] run”, then pick `ubuntu-rootless`
+# Choose “[2] run”, then pick `ubuntu-proot`
 ```
 
 ---
@@ -160,8 +160,8 @@ With the helper above, your phone’s `/sdcard` appears as `~/sdcard` in Ubuntu.
 There’s no “unmount” step for proot. **Exiting** the shell ends the proot process and all children. If you background tasks and need to nuke them from another Termux session:
 
 ```bash
-pgrep -fa 'proot .*containers/ubuntu-rootless'   # inspect
-pkill -f  'proot .*containers/ubuntu-rootless'   # kill
+pgrep -fa 'proot .*containers/ubuntu-proot'   # inspect
+pkill -f  'proot .*containers/ubuntu-proot'   # kill
 ```
 
 ---
@@ -171,13 +171,13 @@ pkill -f  'proot .*containers/ubuntu-rootless'   # kill
 * If you ever see “TERM environment variable not set”, run this from Termux once to persist the fix:
 
   ```bash
-  ubuntu-rootless /bin/sh -c "echo 'export TERM=xterm-256color' >> /root/.bashrc"
+  ubuntu-proot /bin/sh -c "echo 'export TERM=xterm-256color' >> /root/.bashrc"
   ```
 
 * To run one command non-interactively:
 
   ```bash
-  ubuntu-rootless apt-get update
+  ubuntu-proot apt-get update
   ```
 
 * Want the sdcard bind permanently from the config? Add to the container’s Daijin `.conf`:

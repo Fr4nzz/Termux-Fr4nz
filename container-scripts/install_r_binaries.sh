@@ -6,7 +6,7 @@ if [[ $EUID -ne 0 ]]; then
   if command -v sudo >/dev/null 2>&1; then
     exec sudo -E bash "$0" "$@"
   else
-    echo "Please run as root (use: sudo bash setup-r-binaries.sh)"
+    echo "Please run as root (use: sudo bash install_r_binaries.sh)"
     exit 1
   fi
 fi

@@ -70,9 +70,9 @@ Then you can open it in your mobile browser at `http://127.0.0.1:8787`.
 
 We provide two pairs of wrappers:
 
-- `rstudio-rootless-start` / `rstudio-rootless-stop`
+- `rstudio-proot-start` / `rstudio-proot-stop`
   - for the **rootless** container (`daijin`/`proot`, see `ENTERING_CONTAINER_NO_ROOT.md`)
-- `rstudio-root-start` / `rstudio-root-stop`
+- `rstudio-chroot-start` / `rstudio-chroot-stop`
   - for the **rooted** container (`rurima`/`ruri`, see `ENTERING_CONTAINER_ROOT.md`)
 
 All four wrappers:
@@ -80,27 +80,27 @@ All four wrappers:
 - write a PID file under `$PREFIX/var/run/`
 - refuse to start twice if already running
 
-Because the `ubuntu-rootless` / `ubuntu-root` helpers already bind `/sdcard` and the Termux:X11 socket, the container these wrappers spin up is immediately compatible with later launching XFCE/Termux:X11 without re-entering the container with different mounts.
+Because the `ubuntu-proot` / `ubuntu-chroot` helpers already bind `/sdcard` and the Termux:X11 socket, the container these wrappers spin up is immediately compatible with later launching XFCE/Termux:X11 without re-entering the container with different mounts.
 
 ### 1) Rootless (no root / proot)
 
-Create `rstudio-rootless-start`:
+Create `rstudio-proot-start`:
 
 ```bash
 : "${PREFIX:=/data/data/com.termux/files/usr}"
-cat >"$PREFIX/bin/rstudio-rootless-start" <<'SH'
+cat >"$PREFIX/bin/rstudio-proot-start" <<'SH'
 #!/data/data/com.termux/files/usr/bin/sh
 # Start RStudio Server (rootless / daijin+proot) as the desktop user; escalate via sudo.
 : "${PREFIX:=/data/data/com.termux/files/usr}"
-PIDFILE="$PREFIX/var/run/rstudio-rootless.pid"
+PIDFILE="$PREFIX/var/run/rstudio-proot.pid"
 mkdir -p "$PREFIX/var/run"
 
 if [ -f "$PIDFILE" ] && kill -0 "$(cat "$PIDFILE")" 2>/dev/null; then
-  echo "rstudio-rootless-start: already running (PID $(cat "$PIDFILE"))."
+  echo "rstudio-proot-start: already running (PID $(cat "$PIDFILE"))."
   exit 0
 fi
 
-ubuntu-rootless '
+ubuntu-proot '
 export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 sudo rstudio-server start || true
 sleep infinity
@@ -110,21 +110,21 @@ echo $! >"$PIDFILE"
 echo "RStudio Server (rootless) is up."
 echo "Open http://127.0.0.1:8787"
 echo
-echo "Stop with: rstudio-rootless-stop"
+echo "Stop with: rstudio-proot-stop"
 SH
-chmod 0755 "$PREFIX/bin/rstudio-rootless-start"
+chmod 0755 "$PREFIX/bin/rstudio-proot-start"
 ```
 
-Create `rstudio-rootless-stop`:
+Create `rstudio-proot-stop`:
 
 ```bash
 : "${PREFIX:=/data/data/com.termux/files/usr}"
-cat >"$PREFIX/bin/rstudio-rootless-stop" <<'SH'
+cat >"$PREFIX/bin/rstudio-proot-stop" <<'SH'
 #!/data/data/com.termux/files/usr/bin/sh
 # Stop the background RStudio Server (rootless) by killing its proot wrapper.
 
 : "${PREFIX:=/data/data/com.termux/files/usr}"
-PIDFILE="$PREFIX/var/run/rstudio-rootless.pid"
+PIDFILE="$PREFIX/var/run/rstudio-proot.pid"
 
 if [ -f "$PIDFILE" ]; then
   PID="$(cat "$PIDFILE")"
@@ -141,14 +141,14 @@ else
   echo "Not running (no pidfile)."
 fi
 SH
-chmod 0755 "$PREFIX/bin/rstudio-rootless-stop"
+chmod 0755 "$PREFIX/bin/rstudio-proot-stop"
 ```
 
 Usage (rootless):
 
 ```bash
-rstudio-rootless-start   # start server on 127.0.0.1:8787
-rstudio-rootless-stop    # stop it
+rstudio-proot-start   # start server on 127.0.0.1:8787
+rstudio-proot-stop    # stop it
 ```
 
 Open on the phone: `http://127.0.0.1:8787`  
@@ -158,23 +158,23 @@ Log in as your desktop user (the one saved in `/etc/ruri/user`) after setting a 
 
 ### 2) Rooted (real chroot via rurima/ruri)
 
-Create `rstudio-root-start`:
+Create `rstudio-chroot-start`:
 
 ```bash
 : "${PREFIX:=/data/data/com.termux/files/usr}"
-cat >"$PREFIX/bin/rstudio-root-start" <<'SH'
+cat >"$PREFIX/bin/rstudio-chroot-start" <<'SH'
 #!/data/data/com.termux/files/usr/bin/sh
 # Start RStudio Server (rooted / rurima+ruri chroot) as the desktop user; use sudo for mounts/service.
 : "${PREFIX:=/data/data/com.termux/files/usr}"
-PIDFILE="$PREFIX/var/run/rstudio-root.pid"
+PIDFILE="$PREFIX/var/run/rstudio-chroot.pid"
 mkdir -p "$PREFIX/var/run"
 
 if [ -f "$PIDFILE" ] && kill -0 "$(cat "$PIDFILE")" 2>/dev/null; then
-  echo "rstudio-root-start: already running (PID $(cat "$PIDFILE"))."
+  echo "rstudio-chroot-start: already running (PID $(cat "$PIDFILE"))."
   exit 0
 fi
 
-ubuntu-root /bin/bash -lc '
+ubuntu-chroot /bin/bash -lc '
 export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 sudo mountpoint -q /proc || sudo mount -t proc proc /proc
 sudo mountpoint -q /sys  || sudo mount -t sysfs sys /sys
@@ -197,21 +197,21 @@ if [ -n "$PHONE_IP" ]; then
   echo "Or from another device on your Wi-Fi: http://$PHONE_IP:8787"
 fi
 echo
-echo "Stop with: rstudio-root-stop"
+echo "Stop with: rstudio-chroot-stop"
 SH
-chmod 0755 "$PREFIX/bin/rstudio-root-start"
+chmod 0755 "$PREFIX/bin/rstudio-chroot-start"
 ```
 
-Create `rstudio-root-stop`:
+Create `rstudio-chroot-stop`:
 
 ```bash
 : "${PREFIX:=/data/data/com.termux/files/usr}"
-cat >"$PREFIX/bin/rstudio-root-stop" <<'SH'
+cat >"$PREFIX/bin/rstudio-chroot-stop" <<'SH'
 #!/data/data/com.termux/files/usr/bin/sh
 # Stop the background RStudio Server (rooted) by killing its chroot wrapper.
 
 : "${PREFIX:=/data/data/com.termux/files/usr}"
-PIDFILE="$PREFIX/var/run/rstudio-root.pid"
+PIDFILE="$PREFIX/var/run/rstudio-chroot.pid"
 
 if [ -f "$PIDFILE" ]; then
   PID="$(cat "$PIDFILE")"
@@ -228,14 +228,14 @@ else
   echo "Not running (no pidfile)."
 fi
 SH
-chmod 0755 "$PREFIX/bin/rstudio-root-stop"
+chmod 0755 "$PREFIX/bin/rstudio-chroot-stop"
 ```
 
 Usage (rooted):
 
 ```bash
-rstudio-root-start   # start server
-rstudio-root-stop    # stop it
+rstudio-chroot-start   # start server
+rstudio-chroot-stop    # stop it
 ```
 
 The script prints two URLs:
@@ -250,7 +250,7 @@ Log in as your desktop user (the one saved in `/etc/ruri/user`) after setting a 
 ### 3) Notes
 
 * You only need to create these wrappers once.
-* After that, just run `rstudio-rootless-start` / `rstudio-root-start` from Termux whenever you want RStudio.
+* After that, just run `rstudio-proot-start` / `rstudio-chroot-start` from Termux whenever you want RStudio.
 * No need to manually run `rstudio-server stop`. The `*-stop` wrappers kill the background session and clean up the PID file.
 
 ---
@@ -258,7 +258,7 @@ Log in as your desktop user (the one saved in `/etc/ruri/user`) after setting a 
 ### That’s everything
 
 - Username selection happens once in the **First run** step and is stored at `.../etc/ruri/user`.
-- Both `ubuntu-root` and `ubuntu-rootless` use that file, so you always enter the container as the saved desktop user.
+- Both `ubuntu-chroot` and `ubuntu-proot` use that file, so you always enter the container as the saved desktop user.
 - `desktopify` reads the same file to decide whose Desktop gets new shortcuts.
-- Duplicated sections in the RUN_X11 guides are removed; `xfce4-user-start/stop` no longer `su` because we already enter as the saved user.
+- Duplicated sections in the RUN_X11 guides are removed; `xfce4-chroot-start/stop` no longer `su` because we already enter as the saved user.
 ::contentReference[oaicite:0]{index=0}

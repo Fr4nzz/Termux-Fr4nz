@@ -13,7 +13,7 @@ We support two launch modes:
 > 1. Start ONE Termux:X11 server on `:1` and allow both `root` and `ubuntu`.  
 > 2. Enter the container with `/tmp/.X11-unix` bound.  
 > 3. Inside Ubuntu, create user `ubuntu` (Step 3).  
-> 4. Launch the desktop with `xfce4-user-start` (wrapper in Step 11).  
+> 4. Launch the desktop with `xfce4-chroot-start` (wrapper in Step 11).  
 >
 > The desktop shows in the Termux:X11 app.
 
@@ -106,8 +106,8 @@ sudo install -d -m 0755 /run/dbus
 If you entered ubuntu container before, first unmount container so when you enter again you will mount with X socket bound otherwise the X socket won't be mounted
 
 ```bash
-ubuntu-root-u      # unmount/kill
-ubuntu-root        # enter with X socket bound
+ubuntu-chroot-u      # unmount/kill
+ubuntu-chroot        # enter with X socket bound
 ```
 
 ```bash
@@ -220,11 +220,11 @@ pkill termux-x11 >/dev/null 2>&1 || true
 SH
 chmod 0755 "$PREFIX/bin/x11-down"
 
-# xfce4-user-start: start X11, enter container, then launch XFCE as the saved user
-cat >"$PREFIX/bin/xfce4-user-start" <<'SH'
+# xfce4-chroot-start: start X11, enter container, then launch XFCE as the saved user
+cat >"$PREFIX/bin/xfce4-chroot-start" <<'SH'
 #!/data/data/com.termux/files/usr/bin/sh
 x11-up >/dev/null 2>&1 || true
-ubuntu-root /bin/bash -lc '
+ubuntu-chroot /bin/bash -lc '
   export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
   sudo mountpoint -q /proc || sudo mount -t proc proc /proc
   sudo mountpoint -q /sys  || sudo mount -t sysfs sys /sys
@@ -241,26 +241,26 @@ ubuntu-root /bin/bash -lc '
   exec dbus-run-session -- bash -lc "xfce4-session"
 '
 SH
-chmod 0755 "$PREFIX/bin/xfce4-user-start"
+chmod 0755 "$PREFIX/bin/xfce4-chroot-start"
 
-# xfce4-user-stop: stop the user session and X11
-cat >"$PREFIX/bin/xfce4-user-stop" <<'SH'
+# xfce4-chroot-stop: stop the user session and X11
+cat >"$PREFIX/bin/xfce4-chroot-stop" <<'SH'
 #!/data/data/com.termux/files/usr/bin/sh
-ubuntu-root /bin/bash -lc 'killall -q xfce4-session xfwm4 xfce4-panel xfdesktop xfsettingsd || true'
-ubuntu-root-u || true
+ubuntu-chroot /bin/bash -lc 'killall -q xfce4-session xfwm4 xfce4-panel xfdesktop xfsettingsd || true'
+ubuntu-chroot-u || true
 x11-down || true
 SH
-chmod 0755 "$PREFIX/bin/xfce4-user-stop"
+chmod 0755 "$PREFIX/bin/xfce4-chroot-stop"
 ```
 
 ### Usage
 
 ```bash
-xfce4-user-start   # start/enter and launch XFCE as the saved desktop user (recommended)
-xfce4-user-stop    # stop XFCE (user session), unmount container, stop X11
+xfce4-chroot-start   # start/enter and launch XFCE as the saved desktop user (recommended)
+xfce4-chroot-stop    # stop XFCE (user session), unmount container, stop X11
 ```
 
-If it fails try force closing Termux and try again running `xfce4-user-start`.
+If it fails try force closing Termux and try again running `xfce4-chroot-start`.
 
 ---
 

@@ -20,8 +20,8 @@ Works on **arm64/aarch64**.
 
 ```bash
 export DEBIAN_FRONTEND=noninteractive
-apt-get update
-apt-get install -y synaptic adwaita-icon-theme librsvg2-common
+sudo apt-get update
+sudo apt-get install -y synaptic adwaita-icon-theme librsvg2-common
 ```
 
 * **Launch** (as root): `synaptic`
@@ -44,10 +44,10 @@ chmod +x ~/Desktop/synaptic.desktop
 Minimal images often ship with only the `main` component enabled. Turn on **universe** and **multiverse** to unlock tons of packages:
 
 ```bash
-apt-get install -y software-properties-common
-add-apt-repository -y universe
-add-apt-repository -y multiverse
-apt-get update
+sudo apt-get install -y software-properties-common
+sudo add-apt-repository -y universe
+sudo add-apt-repository -y multiverse
+sudo apt-get update
 ```
 
 > This alone will make Synaptic show many more results.
@@ -76,24 +76,24 @@ Ubuntu usually ships Firefox as a Snap, so you need Mozilla’s real APT repo.
 
 ```bash
 set -e
-apt-get update
-apt-get install -y curl gnupg ca-certificates
+sudo apt-get update
+sudo apt-get install -y curl gnupg ca-certificates
 
-install -d -m 0755 /etc/apt/keyrings
+sudo install -d -m 0755 /etc/apt/keyrings
 curl -fsSL https://packages.mozilla.org/apt/repo-signing-key.gpg \
-  | gpg --dearmor -o /etc/apt/keyrings/mozilla.gpg
+  | sudo gpg --dearmor -o /etc/apt/keyrings/mozilla.gpg
 
-cat >/etc/apt/preferences.d/mozilla <<'EOF'
+sudo tee /etc/apt/preferences.d/mozilla >/dev/null <<'EOF'
 Package: *
 Pin: origin packages.mozilla.org
 Pin-Priority: 1000
 EOF
 
 echo "deb [signed-by=/etc/apt/keyrings/mozilla.gpg] https://packages.mozilla.org/apt mozilla main" \
-  > /etc/apt/sources.list.d/mozilla.list
+  | sudo tee /etc/apt/sources.list.d/mozilla.list >/dev/null
 
-apt-get update
-apt-get install -y firefox
+sudo apt-get update
+sudo apt-get install -y firefox
 ```
 
 Then when you're logged in graphically as the unprivileged desktop user (usually `ubuntu`), you can run:
@@ -110,21 +110,21 @@ Ubuntu does not ship VS Code by default. Add Microsoft’s repo and install.
 
 ```bash
 # Tools & keydir
-apt-get install -y curl gnupg ca-certificates
-install -d -m 0755 /etc/apt/keyrings
+sudo apt-get install -y curl gnupg ca-certificates
+sudo install -d -m 0755 /etc/apt/keyrings
 
 # Import Microsoft repo key
 curl -fsSL https://packages.microsoft.com/keys/microsoft.asc \
-  | gpg --dearmor -o /etc/apt/keyrings/packages.microsoft.gpg
+  | sudo gpg --dearmor -o /etc/apt/keyrings/packages.microsoft.gpg
 
 # Add repo (auto-detect architecture)
 ARCH="$(dpkg --print-architecture)"
 echo "deb [arch=${ARCH} signed-by=/etc/apt/keyrings/packages.microsoft.gpg] https://packages.microsoft.com/repos/code stable main" \
-  > /etc/apt/sources.list.d/vscode.list
+  | sudo tee /etc/apt/sources.list.d/vscode.list >/dev/null
 
 # Install
-apt-get update
-apt-get install -y code
+sudo apt-get update
+sudo apt-get install -y code
 ```
 
 ### Running VS Code
@@ -147,26 +147,25 @@ code --disable-gpu &
 ## 6) Desktop icons for apps (desktopify helper)
 
 XFCE won’t automatically drop icons to the Desktop for new apps.  
-We’ll add a tiny helper script that copies `.desktop` launchers into the `ubuntu` user’s Desktop.
+We’ll add a tiny helper script that copies `.desktop` launchers into your saved desktop user’s `~/Desktop`.
 
 Run this **once as root inside Ubuntu**:
 
 ```bash
+# Run once as root inside Ubuntu
 cat >/usr/local/bin/desktopify <<'SH'
 #!/bin/sh
 set -eu
-user_home="/home/ubuntu"
+RU="$(cat /etc/ruri/user)"
+user_home="/home/$RU"
 desk="$user_home/Desktop"
 [ -d "$desk" ] || mkdir -p "$desk"
-for name; do
+for name in "$@"; do
   src="/usr/share/applications/$name.desktop"
-  if [ ! -f "$src" ]; then
-    echo "No $src"
-    continue
-  fi
+  [ -f "$src" ] || { echo "No $src"; continue; }
   cp -f "$src" "$desk/"
   chmod +x "$desk/$name.desktop"
-  chown ubuntu:ubuntu "$desk/$name.desktop"
+  chown "$RU:$RU" "$desk/$name.desktop"
 done
 SH
 chmod 0755 /usr/local/bin/desktopify

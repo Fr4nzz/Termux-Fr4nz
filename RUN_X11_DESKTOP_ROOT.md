@@ -56,39 +56,6 @@ If you encounter Make sure an X server isn't already running(EE) error, close Te
 
 ---
 
-## 2) Replace the “enter” wrapper for ROOT with X11 bind
-
-```bash
-P="$PREFIX/bin"
-cat >"$P/ubuntu-root" <<'SH'
-#!/data/data/com.termux/files/usr/bin/sh
-C="$HOME/containers/ubuntu-root"
-TP="/data/data/com.termux/files/usr/tmp/.X11-unix"
-exec sudo rurima r \
-  -m "$TP" /tmp/.X11-unix \
-  -m /sdcard /root/sdcard \
-  "$C" "$@"
-SH
-chmod 0755 "$P/ubuntu-root"
-
-cat >"$P/ubuntu-root-u" <<'SH'
-#!/data/data/com.termux/files/usr/bin/sh
-C="$HOME/containers/ubuntu-root"
-exec sudo rurima r -U "$C"
-SH
-chmod 0755 "$P/ubuntu-root-u"
-hash -r
-```
-
-Usage:
-
-```bash
-ubuntu-root        # enter with X socket bound (first have to unmount to mount a new directory)
-ubuntu-root-u      # unmount/kill
-```
-
----
-
 ## 3) Inside Ubuntu (first time): packages
 
 ```bash
@@ -97,111 +64,39 @@ export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 export DEBIAN_FRONTEND=noninteractive
 
 # Block service autostarts during package install inside chroot
-install -d /usr/sbin
-cat >/usr/sbin/policy-rc.d <<'EOF'
+sudo install -d /usr/sbin
+sudo tee /usr/sbin/policy-rc.d >/dev/null <<'EOF'
 #!/bin/sh
 exit 101
 EOF
-chmod +x /usr/sbin/policy-rc.d
+sudo chmod +x /usr/sbin/policy-rc.d
 
-apt-get update -y
+sudo apt-get update -y
 
 # Ensure debconf/dpkg helpers exist BEFORE anything else
-apt-get install -y --no-install-recommends debconf
+sudo apt-get install -y --no-install-recommends debconf
 
 # Common helpers many postinsts need
-apt-get install -y --reinstall --no-install-recommends \
+sudo apt-get install -y --reinstall --no-install-recommends \
   debconf-i18n init-system-helpers perl-base adduser dialog locales tzdata
 
 # sgml/xml helpers (provides update-catalog) then settle anything pending
-apt-get install -y --reinstall --no-install-recommends sgml-base xml-core
-dpkg --configure -a || true
-apt-get -o Dpkg::Options::="--force-confnew" -f install
+sudo apt-get install -y --reinstall --no-install-recommends sgml-base xml-core
+sudo dpkg --configure -a || true
+sudo apt-get -o Dpkg::Options::="--force-confnew" -f install
 
 # Desktop bits (CORE) — explicitly include xfce4-session
-apt-get install -y --no-install-recommends \
+sudo apt-get install -y --no-install-recommends \
   xfce4 xfce4-session xfce4-terminal \
   dbus dbus-x11 xterm fonts-dejavu-core x11-utils psmisc
 
 # Locale
-sed -i 's/^# *en_US.UTF-8 UTF-8/en_US.UTF-8 UTF-8/' /etc/locale.gen
-locale-gen en_US.UTF-8
+sudo sed -i 's/^# *en_US.UTF-8 UTF-8/en_US.UTF-8 UTF-8/' /etc/locale.gen
+sudo locale-gen en_US.UTF-8
 
 # D-Bus prep (we'll run per-session later)
-dbus-uuidgen --ensure
-mkdir -p /run/dbus
-
-# Optional unprivileged user
-adduser --disabled-password --gecos '' ubuntu || true
-adduser ubuntu sudo || true
-echo 'ubuntu ALL=(ALL) NOPASSWD: ALL' >/etc/sudoers.d/ubuntu
-chmod 0440 /etc/sudoers.d/ubuntu
-```
-
----
-
-## 4) Start the desktop as the `ubuntu` user (recommended)
-
-Running the graphical session as an unprivileged user fixes a ton of problems:
-
-* VLC refuses to run as root — works fine as `ubuntu`.
-* Firefox and other desktop apps expect a normal user session.
-* Fewer polkit / login1 / power-manager warnings.
-
-We'll keep the root “manual session” instructions in the next section for debugging, but day-to-day you should start XFCE as `ubuntu`.
-
-### Runtime expectations
-
-* Termux already started an X server on `:1` and granted access to `root` and `ubuntu` (Step 1).
-* `ubuntu-root` (Step 2) mounts `/tmp/.X11-unix` from Termux into the container.
-* Step 3 already created user `ubuntu`, added it to sudo, and allowed passwordless sudo.
-
-You normally won't launch XFCE by hand; you'll use helper wrappers from Step 11:
-
-```bash
-xfce4-user-start    # from Termux shell (outside Ubuntu)
-xfce4-user-stop     # to stop the session
-```
-
-Those helpers do all of this for you automatically:
-
-1. Ensure Termux:X11 is running on `:1`.
-2. Enter the rooted Ubuntu container with the X11 socket bind.
-3. Set up minimal mounts (`/proc`, `/sys`, `/dev/pts`, `/dev/shm`, etc.).
-4. `su - ubuntu` and run:
-   * `DISPLAY=:1`
-   * `XDG_RUNTIME_DIR=$HOME/.run`
-   * `dbus-run-session -- xfce4-session`
-
-Apps like VLC, Firefox, etc. now behave like a normal desktop session.
-
-If you need to do the equivalent by hand (for debugging):
-
-```bash
-# Termux side:
-x11-up          # make sure Termux:X11 is up and xhost is open
-ubuntu-root     # drop into the chroot as root
-
-# Inside Ubuntu (now root in the container):
-mountpoint -q /proc || mount -t proc proc /proc
-mountpoint -q /sys  || mount -t sysfs sys /sys
-mkdir -p /dev/pts /dev/shm /run /tmp/.ICE-unix
-mountpoint -q /dev/pts || mount -t devpts devpts /dev/pts
-mountpoint -q /dev/shm || mount -t tmpfs -o rw,nosuid,nodev,mode=1777,size=256M tmpfs /dev/shm
-chmod 1777 /tmp/.ICE-unix
-
-# Switch to the unprivileged session:
-su - ubuntu
-
-# As ubuntu inside Ubuntu:
-export DISPLAY=:1
-export LANG=en_US.UTF-8 LC_ALL=en_US.UTF-8
-export GDK_BACKEND=x11
-export QT_QPA_PLATFORM=xcb
-export LIBGL_ALWAYS_SOFTWARE=1
-mkdir -p "$HOME/.run" && chmod 700 "$HOME/.run"
-export XDG_RUNTIME_DIR="$HOME/.run"
-dbus-run-session -- bash -lc "xfce4-session"
+sudo dbus-uuidgen --ensure
+sudo install -d -m 0755 /run/dbus
 ```
 
 ---
@@ -279,21 +174,6 @@ termux-x11 :1 -legacy-drawing -dpi 160 &
 
 ---
 
-## 9) Restart/stop (manual session)
-
-```bash
-# inside Ubuntu
-killall -q xfce4-session xfwm4 xfce4-panel xfdesktop xfsettingsd || true
-exit
-
-# Termux
-ubuntu-root-u
-am broadcast -a com.termux.x11.ACTION_STOP -p com.termux.x11 || true
-pkill termux-x11 || true
-```
-
----
-
 ## 10) Optional: make UI prettier (install `xfce4-goodies`)
 
 ```bash
@@ -340,38 +220,35 @@ pkill termux-x11 >/dev/null 2>&1 || true
 SH
 chmod 0755 "$PREFIX/bin/x11-down"
 
-# xfce4-user-start: start X11, enter container, then launch XFCE AS "ubuntu"
-# This is the normal launcher for desktop apps (VLC, Firefox, VS Code, etc.).
+# xfce4-user-start: start X11, enter container, then launch XFCE as the saved user
 cat >"$PREFIX/bin/xfce4-user-start" <<'SH'
 #!/data/data/com.termux/files/usr/bin/sh
 x11-up >/dev/null 2>&1 || true
 ubuntu-root /bin/bash -lc '
-export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
-mountpoint -q /proc || mount -t proc proc /proc
-mountpoint -q /sys  || mount -t sysfs sys /sys
-mkdir -p /dev/pts /dev/shm /run /tmp/.ICE-unix
-mountpoint -q /dev/pts || mount -t devpts devpts /dev/pts
-mountpoint -q /dev/shm || mount -t tmpfs -o rw,nosuid,nodev,mode=1777,size=256M tmpfs /dev/shm
-chmod 1777 /tmp/.ICE-unix
+  export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+  sudo mountpoint -q /proc || sudo mount -t proc proc /proc
+  sudo mountpoint -q /sys  || sudo mount -t sysfs sys /sys
+  sudo mkdir -p /dev/pts /dev/shm /run /tmp/.ICE-unix
+  sudo mountpoint -q /dev/pts || sudo mount -t devpts devpts /dev/pts
+  sudo mountpoint -q /dev/shm || sudo mount -t tmpfs -o rw,nosuid,nodev,mode=1777,size=256M tmpfs /dev/shm
+  sudo chmod 1777 /tmp/.ICE-unix
 
-su - ubuntu -c "
   export DISPLAY=:1 LANG=en_US.UTF-8 LC_ALL=en_US.UTF-8 GDK_BACKEND=x11 QT_QPA_PLATFORM=xcb LIBGL_ALWAYS_SOFTWARE=1
-  mkdir -p \$HOME/.run && chmod 700 \$HOME/.run
-  export XDG_RUNTIME_DIR=\$HOME/.run
-  command -v xfce4-session >/dev/null || { echo \"xfce4-session not installed (run Step 3).\"; exit 1; }
-  exec dbus-run-session -- bash -lc \"xfce4-session\"
-"
+  mkdir -p "$HOME/.run" && chmod 700 "$HOME/.run"
+  export XDG_RUNTIME_DIR="$HOME/.run"
+
+  command -v xfce4-session >/dev/null || { echo "xfce4-session not installed (see Step 3)."; exit 1; }
+  exec dbus-run-session -- bash -lc "xfce4-session"
 '
 SH
 chmod 0755 "$PREFIX/bin/xfce4-user-start"
 
-# xfce4-user-stop: stop the "ubuntu" session and X11
+# xfce4-user-stop: stop the user session and X11
 cat >"$PREFIX/bin/xfce4-user-stop" <<'SH'
 #!/data/data/com.termux/files/usr/bin/sh
-ubuntu-root /bin/bash -lc "su - ubuntu -c 'killall -q xfce4-session xfwm4 xfce4-panel xfdesktop xfsettingsd || true'"
+ubuntu-root /bin/bash -lc 'killall -q xfce4-session xfwm4 xfce4-panel xfdesktop xfsettingsd || true'
 ubuntu-root-u || true
-am broadcast -a com.termux.x11.ACTION_STOP -p com.termux.x11 >/dev/null 2>&1 || true
-pkill termux-x11 >/dev/null 2>&1 || true
+x11-down || true
 SH
 chmod 0755 "$PREFIX/bin/xfce4-user-stop"
 ```
@@ -379,7 +256,7 @@ chmod 0755 "$PREFIX/bin/xfce4-user-stop"
 ### Usage
 
 ```bash
-xfce4-user-start   # start/enter and launch XFCE as "ubuntu" (recommended)
+xfce4-user-start   # start/enter and launch XFCE as the saved desktop user (recommended)
 xfce4-user-stop    # stop XFCE (user session), unmount container, stop X11
 ```
 

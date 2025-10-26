@@ -3,8 +3,12 @@ set -euo pipefail
 
 # --- 0) Basics ---------------------------------------------------------------
 if [[ $EUID -ne 0 ]]; then
-  echo "Please run as root (use: sudo bash setup-r-binaries.sh)"
-  exit 1
+  if command -v sudo >/dev/null 2>&1; then
+    exec sudo -E bash "$0" "$@"
+  else
+    echo "Please run as root (use: sudo bash setup-r-binaries.sh)"
+    exit 1
+  fi
 fi
 
 export DEBIAN_FRONTEND=noninteractive

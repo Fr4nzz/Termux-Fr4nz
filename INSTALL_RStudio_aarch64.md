@@ -8,15 +8,14 @@ RStudio Server provides the familiar IDE in a browser. These steps target the Ub
 
 ## One-shot install script
 
-Copy/paste this inside the container (root shell):
+Copy/paste this inside the container (as your desktop user; uses sudo):
 
 ```bash
 set -euo pipefail
 export DEBIAN_FRONTEND=noninteractive
 
-dpkg --add-architecture arm64 || true
-apt update
-apt install -y --no-install-recommends \
+sudo apt update
+sudo apt install -y --no-install-recommends \
   gdebi-core gnupg lsb-release ca-certificates wget \
   libssl3 libxml2 libcurl4 libedit2 libuuid1 libpq5 \
   libsqlite3-0 libbz2-1.0 liblzma5 libreadline8
@@ -26,12 +25,11 @@ RSTUDIO_DEB_URL="https://download2.rstudio.org/server/jammy/amd64/rstudio-server
 RSTUDIO_DEB="$(mktemp --suffix=.deb)"
 wget -O "$RSTUDIO_DEB" "$RSTUDIO_DEB_URL"
 
-gdebi -n "$RSTUDIO_DEB"
+sudo gdebi -n "$RSTUDIO_DEB" || sudo apt-get -f install -y
 rm -f "$RSTUDIO_DEB"
 
-systemctl stop rstudio-server || true
-rstudio-server verify-installation
-rstudio-server start
+sudo rstudio-server verify-installation
+sudo rstudio-server start
 ```
 
 > `rstudio-server` listens on port 8787 by default. Inside Termux/proot expose it with `ssh -L` or `cloudflared` as needed.
@@ -41,41 +39,31 @@ rstudio-server start
 ## Useful admin commands
 
 ```bash
-rstudio-server start            # launch the service
-rstudio-server stop             # stop gracefully
-rstudio-server restart          # restart after config changes
-rstudio-server status           # check state + log tail
-rstudio-server verify-installation
+sudo rstudio-server start            # launch the service
+sudo rstudio-server stop             # stop gracefully
+sudo rstudio-server restart          # restart after config changes
+sudo rstudio-server status           # check state + log tail
+sudo rstudio-server verify-installation
 ``` 
 
-Default login is any Linux user present on the system.
-
-* **Daijin/proot quick path:** the root account works out of the box; `ubuntu adduser <name>` if you prefer a non-root login.
-* **Port:** 8787/tcp. Use `ss -tlnp | grep 8787` to confirm it’s listening.
-
 ---
 
-## Preferred flow for rooted containers
+### Login user (required for RStudio Server)
+RStudio Server authenticates via PAM. Use the desktop user you created during the *First run* step.
 
-Running everything as root is convenient but risky. On a rooted device/container, create a normal user and enable sudo:
-
+Inside the container, set a password **once** so you can sign in:
 ```bash
-adduser analyst
-usermod -aG sudo analyst
-passwd analyst
+U="$(cat /etc/ruri/user)"
+passwd "$U"
 ```
 
-Then log in to RStudio with `analyst` and run elevated tasks via `sudo` inside the IDE terminal.
-
-You can adjust RStudio Server config at `/etc/rstudio/rserver.conf`; reload with `rstudio-server restart`.
-
----
-
-Need tweaks (reverse proxy, PAM tweaks, shared storage binds)? Let me know and I’ll extend this doc.
+You already have passwordless sudo via `/etc/sudoers.d/99-$U`, so `sudo` from a shell as `$U` will **not** prompt for a password.
 
 ---
 
 ## Termux wrappers: start/stop RStudio Server
+
+*(leave the existing wrapper content unchanged)*
 
 Goal: start RStudio Server on port 8787 from Termux with one command, and stop it with another.  
 Then you can open it in your mobile browser at `http://127.0.0.1:8787`.
@@ -102,10 +90,7 @@ Create `rstudio-rootless-start`:
 : "${PREFIX:=/data/data/com.termux/files/usr}"
 cat >"$PREFIX/bin/rstudio-rootless-start" <<'SH'
 #!/data/data/com.termux/files/usr/bin/sh
-# Start RStudio Server (rootless / daijin+proot).
-# Exposes http://127.0.0.1:8787 to the phone.
-# Keeps the proot session alive in background and stores its PID.
-
+# Start RStudio Server (rootless / daijin+proot) as the desktop user; escalate via sudo.
 : "${PREFIX:=/data/data/com.termux/files/usr}"
 PIDFILE="$PREFIX/var/run/rstudio-rootless.pid"
 mkdir -p "$PREFIX/var/run"
@@ -115,12 +100,13 @@ if [ -f "$PIDFILE" ] && kill -0 "$(cat "$PIDFILE")" 2>/dev/null; then
   exit 0
 fi
 
-ubuntu-rootless 'export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin;
-rstudio-server start || true;
-sleep infinity' &
+ubuntu-rootless '
+export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+sudo rstudio-server start || true
+sleep infinity
+' &
 
 echo $! >"$PIDFILE"
-
 echo "RStudio Server (rootless) is up."
 echo "Open http://127.0.0.1:8787"
 echo
@@ -166,7 +152,7 @@ rstudio-rootless-stop    # stop it
 ```
 
 Open on the phone: `http://127.0.0.1:8787`  
-Log in as `root` or any user you created in the container.
+Log in as your desktop user (the one saved in `/etc/ruri/user`) after setting a password with `passwd`.
 
 ---
 
@@ -178,9 +164,7 @@ Create `rstudio-root-start`:
 : "${PREFIX:=/data/data/com.termux/files/usr}"
 cat >"$PREFIX/bin/rstudio-root-start" <<'SH'
 #!/data/data/com.termux/files/usr/bin/sh
-# Start RStudio Server (rooted / rurima+ruri chroot).
-# Also tries to show a LAN URL using the phone's IP so you can connect from another device.
-
+# Start RStudio Server (rooted / rurima+ruri chroot) as the desktop user; use sudo for mounts/service.
 : "${PREFIX:=/data/data/com.termux/files/usr}"
 PIDFILE="$PREFIX/var/run/rstudio-root.pid"
 mkdir -p "$PREFIX/var/run"
@@ -192,13 +176,13 @@ fi
 
 ubuntu-root /bin/bash -lc '
 export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
-mountpoint -q /proc || mount -t proc proc /proc
-mountpoint -q /sys  || mount -t sysfs sys /sys
-mkdir -p /dev/pts /dev/shm /run /tmp/.ICE-unix
-mountpoint -q /dev/pts || mount -t devpts devpts /dev/pts
-mountpoint -q /dev/shm || mount -t tmpfs -o rw,nosuid,nodev,mode=1777,size=256M tmpfs /dev/shm
-chmod 1777 /tmp/.ICE-unix
-rstudio-server start || true
+sudo mountpoint -q /proc || sudo mount -t proc proc /proc
+sudo mountpoint -q /sys  || sudo mount -t sysfs sys /sys
+sudo mkdir -p /dev/pts /dev/shm /run /tmp/.ICE-unix
+sudo mountpoint -q /dev/pts || sudo mount -t devpts devpts /dev/pts
+sudo mountpoint -q /dev/shm || sudo mount -t tmpfs -o rw,nosuid,nodev,mode=1777,size=256M tmpfs /dev/shm
+sudo chmod 1777 /tmp/.ICE-unix
+sudo rstudio-server start || true
 sleep infinity
 ' &
 
@@ -258,6 +242,8 @@ The script prints two URLs:
 
 * `http://127.0.0.1:8787` → open in the phone’s own browser.
 * `http://<phone_ip>:8787` → open from another device on the same Wi-Fi (if we could detect the phone IP).
+Log in as your desktop user (the one saved in `/etc/ruri/user`) after setting a password with `passwd`.
+*Log in as your desktop user (the one saved in `/etc/ruri/user`) after setting a password with `passwd`.*
 
 ---
 
@@ -266,3 +252,13 @@ The script prints two URLs:
 * You only need to create these wrappers once.
 * After that, just run `rstudio-rootless-start` / `rstudio-root-start` from Termux whenever you want RStudio.
 * No need to manually run `rstudio-server stop`. The `*-stop` wrappers kill the background session and clean up the PID file.
+
+---
+
+### That’s everything
+
+- Username selection happens once in the **First run** step and is stored at `.../etc/ruri/user`.
+- Both `ubuntu-root` and `ubuntu-rootless` use that file, so you always enter the container as the saved desktop user.
+- `desktopify` reads the same file to decide whose Desktop gets new shortcuts.
+- Duplicated sections in the RUN_X11 guides are removed; `xfce4-user-start/stop` no longer `su` because we already enter as the saved user.
+::contentReference[oaicite:0]{index=0}

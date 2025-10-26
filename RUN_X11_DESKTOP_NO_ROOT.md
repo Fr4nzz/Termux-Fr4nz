@@ -45,50 +45,6 @@ If you see **“Make sure an X server isn’t already running (EE)”**, close T
 
 ---
 
-## 2) Replace the “enter” wrapper for NON-ROOT with X11 bind
-
-```bash
-P="$PREFIX/bin"
-cat >"$P/ubuntu-rootless" <<'SH'
-#!/data/data/com.termux/files/usr/bin/sh
-C="$HOME/containers/ubuntu-rootless"
-TP="/data/data/com.termux/files/usr/tmp/.X11-unix"
-if [ "$#" -gt 0 ]; then
-  exec "$PREFIX/share/daijin/proot_start.sh" -r "$C" \
-    -e "-b $TP:/tmp/.X11-unix -b /sdcard:/mnt/sdcard -w /root" \
-    /usr/bin/env -i HOME=/root TERM=xterm-256color \
-    PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin \
-    /bin/bash -lc "$*"
-else
-  exec "$PREFIX/share/daijin/proot_start.sh" -r "$C" \
-    -e "-b $TP:/tmp/.X11-unix -b /sdcard:/mnt/sdcard -w /root" \
-    /usr/bin/env -i HOME=/root TERM=xterm-256color \
-    PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin \
-    /bin/bash -l
-fi
-SH
-chmod 0755 "$P/ubuntu-rootless"
-
-cat >"$P/ubuntu-rootless-u" <<'SH'
-#!/data/data/com.termux/files/usr/bin/sh
-# Best-effort stop for matching proot session
-C="$HOME/containers/ubuntu-rootless"
-pkill -f "proot .*${C}" || true
-SH
-chmod 0755 "$P/ubuntu-rootless-u"
-hash -r
-```
-
-Usage:
-
-```bash
-ubuntu-rootless          # enter interactively with X socket bound
-ubuntu-rootless 'echo hi'  # run a command non-interactively (now supported)
-ubuntu-rootless-u        # kill matching proot if needed
-```
-
----
-
 ## 3) Inside Ubuntu (first time): packages
 
 ```bash
@@ -97,45 +53,39 @@ export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 export DEBIAN_FRONTEND=noninteractive
 
 # Block service autostarts during package install (harmless in proot, prevents noisy postinsts)
-install -d /usr/sbin
-cat >/usr/sbin/policy-rc.d <<'EOF'
+sudo install -d /usr/sbin
+sudo tee /usr/sbin/policy-rc.d >/dev/null <<'EOF'
 #!/bin/sh
 exit 101
 EOF
-chmod +x /usr/sbin/policy-rc.d
+sudo chmod +x /usr/sbin/policy-rc.d
 
-apt-get update -y
+sudo apt-get update -y
 
 # Ensure debconf/dpkg helpers exist BEFORE anything else
-apt-get install -y --no-install-recommends debconf
+sudo apt-get install -y --no-install-recommends debconf
 
 # Common helpers many postinsts need
-apt-get install -y --reinstall --no-install-recommends \
+sudo apt-get install -y --reinstall --no-install-recommends \
   debconf-i18n init-system-helpers perl-base adduser dialog locales tzdata
 
 # sgml/xml helpers (provides update-catalog) then settle anything pending
-apt-get install -y --reinstall --no-install-recommends sgml-base xml-core
-dpkg --configure -a || true
-apt-get -o Dpkg::Options::="--force-confnew" -f install
+sudo apt-get install -y --reinstall --no-install-recommends sgml-base xml-core
+sudo dpkg --configure -a || true
+sudo apt-get -o Dpkg::Options::="--force-confnew" -f install
 
 # Desktop bits (CORE) — explicitly include xfce4-session
-apt-get install -y --no-install-recommends \
+sudo apt-get install -y --no-install-recommends \
   xfce4 xfce4-session xfce4-terminal \
   dbus dbus-x11 xterm fonts-dejavu-core x11-utils psmisc
 
 # Locale
-sed -i 's/^# *en_US.UTF-8 UTF-8/en_US.UTF-8 UTF-8/' /etc/locale.gen
-locale-gen en_US.UTF-8
+sudo sed -i 's/^# *en_US.UTF-8 UTF-8/en_US.UTF-8 UTF-8/' /etc/locale.gen
+sudo locale-gen en_US.UTF-8
 
 # D-Bus prep (session uses dbus-run-session)
-dbus-uuidgen --ensure
-mkdir -p /run/dbus
-
-# Optional unprivileged user
-adduser --disabled-password --gecos '' ubuntu || true
-adduser ubuntu sudo || true
-echo 'ubuntu ALL=(ALL) NOPASSWD: ALL' >/etc/sudoers.d/ubuntu
-chmod 0440 /etc/sudoers.d/ubuntu
+sudo dbus-uuidgen --ensure
+sudo install -d -m 0755 /run/dbus
 ```
 
 ---

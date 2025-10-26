@@ -5,16 +5,17 @@ This is container method–agnostic. Works the same whether you entered via `rur
 **Supported Ubuntu releases:** 22.04 (jammy) and 24.04 (noble).  
 **r2u binaries:** amd64 (jammy & noble) and arm64 (noble).
 
-## Steps (run as root inside Ubuntu)
+## Steps (run as your desktop user; uses sudo)
 
 ```bash
 export DEBIAN_FRONTEND=noninteractive
-apt-get update -y
-# Base tools so package post-install scripts work in minimal images
-apt-get install -y --no-install-recommends debconf debconf-i18n gnupg ca-certificates curl
+sudo apt-get update -y
 
-# Install R + bspm/r2u setup
-curl -fsSL https://raw.githubusercontent.com/Fr4nzz/Termux-Fr4nz/refs/heads/main/setup-r-binaries.sh | bash
+# Base tools so package post-install scripts work in minimal images
+sudo apt-get install -y --no-install-recommends debconf debconf-i18n gnupg ca-certificates curl
+
+# Install R + bspm/r2u setup (script will sudo itself if needed)
+curl -fsSL https://raw.githubusercontent.com/Fr4nzz/Termux-Fr4nz/refs/heads/main/setup-r-binaries.sh | sudo bash
 ```
 
 After this:
@@ -22,9 +23,4 @@ After this:
 * `R` is installed from CRAN’s Ubuntu repo.
 * `bspm` is enabled so `install.packages()` prefers system binaries (r2u/Ubuntu r-cran-*), falling back to source when needed.
 
-If you’re not root inside Ubuntu, prefix with `sudo`:
-
-```bash
-sudo bash -lc 'export DEBIAN_FRONTEND=noninteractive; apt-get update -y; apt-get install -y --no-install-recommends debconf debconf-i18n gnupg ca-certificates curl'
-curl -fsSL https://raw.githubusercontent.com/Fr4nzz/Termux-Fr4nz/refs/heads/main/setup-r-binaries.sh | sudo bash
-```
+> *Note:* The installer script auto-elevates with `sudo` if needed—no manual root shell required.

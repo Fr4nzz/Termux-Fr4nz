@@ -42,23 +42,48 @@ The script asks for a name, defaults to **proot** for non-root usage, and writes
 
 ---
 
-## 3) One-time container fixups (before first login)
-
-Fix networking and a few permissions **inside** Ubuntu by piping Daijin’s `fixup.sh` into a minimal shell:
+## One-time setup (inside Ubuntu): networking fix + set TERM + create desktop user
 
 ```bash
+# Set your ROOTLESS container path (matches your earlier step)
+CONTAINER="$HOME/containers/ubuntu-rootless"
+
+# Ask for a desktop username (default: legend)
+read -rp "Desktop username [legend]: " U; U="${U:-legend}"
+
+# 1) Fix networking/permissions in a minimal image
 curl -fsSL https://raw.githubusercontent.com/RuriOSS/daijin/refs/heads/main/src/share/fixup.sh \
   | "$PREFIX/share/daijin/proot_start.sh" -r "$CONTAINER" \
     /usr/bin/env -i HOME=/root TERM=xterm-256color \
     PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin \
     /bin/sh
+
+# 2) Create user, grant NOPASSWD sudo, remember the name, set TERM for root + user
+"$PREFIX/share/daijin/proot_start.sh" -r "$CONTAINER" \
+  /bin/sh -lc "
+  set -e
+  adduser --disabled-password --gecos '' '$U' || true
+  adduser '$U' sudo || true
+  echo '$U ALL=(ALL) NOPASSWD: ALL' > /etc/sudoers.d/99-$U
+  chmod 0440 /etc/sudoers.d/99-$U
+
+  # Remember the chosen user for wrappers
+  install -d -m 0755 /etc/ruri
+  printf '%s\n' '$U' > /etc/ruri/user
+
+  # Per-user runtime dir
+  install -d -m 0700 -o '$U' -g '$U' /home/'$U'/.run
+
+  # TERM defaults
+  echo 'export TERM=xterm-256color' >> /root/.bashrc
+  su - '$U' -c \"echo 'export TERM=xterm-256color' >> ~/.bashrc\"
+"
+
+echo
+echo "✅ Created user '$U' with passwordless sudo."
+echo "👉 For RStudio Server logins, set a password later:"
+echo "   $PREFIX/share/daijin/proot_start.sh -r \"$CONTAINER\" /usr/bin/passwd '$U'"
 ```
-
-Why this matters:
-
-* Adjusts `_apt` and related groups so apt works without warnings.
-* Rewrites `/etc/resolv.conf` so DNS works immediately.
-* Uses Daijin’s starter, which already mounts `/dev`, `/proc`, `/sys`, sets `-w /root`, and applies the usual proot shims.
 
 ---
 
@@ -69,7 +94,7 @@ Why this matters:
 This wrapper does three things up front:
 - binds `/sdcard` into the container,
 - binds the Termux:X11 socket into `/tmp/.X11-unix`,
-- sets a sane root login environment.
+- logs you in as the saved desktop user.
 
 We always include those mounts even if you’re just doing CLI or R/RStudio and not using a desktop yet.  
 Result: you can later launch XFCE/X11 without having to “unmount and re-enter with different args.”
@@ -80,30 +105,22 @@ It supports both interactive shells and one-off commands.
 P=/data/data/com.termux/files/usr
 cat >"$P/bin/ubuntu-rootless" <<'SH'
 #!/data/data/com.termux/files/usr/bin/sh
-# Enter the rootless Ubuntu container (daijin/proot).
-# - Always bind /sdcard into /mnt/sdcard.
-# - Always bind the Termux:X11 socket into /tmp/.X11-unix.
-# This makes the session immediately ready for things like RStudio Server or XFCE later.
-
+# Enter the rootless Ubuntu container (daijin/proot) as the saved desktop user.
 : "${PREFIX:=/data/data/com.termux/files/usr}"
-
 C="/data/data/com.termux/files/home/containers/ubuntu-rootless"
 TP="/data/data/com.termux/files/usr/tmp/.X11-unix"
+U="$(cat "$C/etc/ruri/user")"
 
 if [ "$#" -gt 0 ]; then
   exec "$PREFIX/share/daijin/proot_start.sh" \
     -r "$C" \
     -e "-b $TP:/tmp/.X11-unix -b /sdcard:/mnt/sdcard -w /root" \
-    /usr/bin/env -i HOME=/root TERM=xterm-256color \
-    PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin \
-    /bin/bash -lc "$*"
+    /bin/su - "$U" -c "$*"
 else
   exec "$PREFIX/share/daijin/proot_start.sh" \
     -r "$C" \
     -e "-b $TP:/tmp/.X11-unix -b /sdcard:/mnt/sdcard -w /root" \
-    /usr/bin/env -i HOME=/root TERM=xterm-256color \
-    PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin \
-    /bin/bash -l
+    /bin/su - "$U"
 fi
 SH
 chmod 0755 "$P/bin/ubuntu-rootless"

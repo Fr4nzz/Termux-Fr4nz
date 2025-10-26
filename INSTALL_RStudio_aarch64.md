@@ -204,12 +204,8 @@ sleep infinity
 
 echo $! >"$PIDFILE"
 
-# Try to detect the phone's LAN IP, preferring tsu if present.
-PHONE_IP=""
-if command -v tsu >/dev/null 2>&1; then
-  PHONE_IP="$(tsu -c "ip -4 route get 1.1.1.1 2>/dev/null" | awk '{for(i=1;i<=NF;i++)if($i=="src"){print $(i+1); exit}}')"
-fi
-[ -z "$PHONE_IP" ] && PHONE_IP="$(ip -4 route get 1.1.1.1 2>/dev/null | awk '{for(i=1;i<=NF;i++)if($i=="src"){print $(i+1); exit}}')"
+# Try to detect the phone's LAN IP (assumes sudo + wlan0 available).
+PHONE_IP="$(sudo ip -4 addr show wlan0 2>/dev/null | awk '/inet / {print $2}' | cut -d/ -f1)"
 
 echo "RStudio Server (rooted) is up."
 echo "Open http://127.0.0.1:8787"

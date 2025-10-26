@@ -151,11 +151,10 @@ pkill -f  'proot .*containers/ubuntu-rootless'   # kill
 
 ## 7) Tips
 
-* If you ever see “TERM environment variable not set”, inside Ubuntu:
+* If you ever see “TERM environment variable not set”, run this from Termux once to persist the fix:
 
   ```bash
-  export TERM=xterm-256color
-  echo 'export TERM=xterm-256color' >> /root/.bashrc
+  ubuntu-rootless /bin/sh -c "echo 'export TERM=xterm-256color' >> /root/.bashrc"
   ```
 
 * To run one command non-interactively:

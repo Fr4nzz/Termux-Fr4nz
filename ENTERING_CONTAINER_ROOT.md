@@ -37,9 +37,10 @@ sudo rurima r -m /sdcard /root/sdcard "$HOME/containers/ubuntu-root"
 
 ## Set terminal type inside Ubuntu (fix “TERM not set”)
 
+Run this from Termux so the setting is persistent for future logins:
+
 ```bash
-export TERM=xterm-256color
-echo 'export TERM=xterm-256color' >> /root/.bashrc
+sudo rurima r "$HOME/containers/ubuntu-root" /bin/sh -c "echo 'export TERM=xterm-256color' >> /root/.bashrc"
 ```
 
 ## Optional helpers (recommended wrappers with desktop-friendly mounts)

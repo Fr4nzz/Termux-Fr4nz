@@ -57,7 +57,7 @@ sudo apt-get update
 ## 3) Optional CLI helpers (nice in terminals and also visible in Synaptic)
 
 ```bash
-apt-get install -y nala aptitude
+sudo apt-get install -y nala aptitude
 # Optional: pick faster mirrors for nala
 nala fetch || true
 ```

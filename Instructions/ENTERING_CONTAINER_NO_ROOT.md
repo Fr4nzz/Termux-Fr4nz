@@ -151,7 +151,7 @@ If you haven’t yet:
 termux-setup-storage
 ```
 
-With the helper above, your phone’s `/sdcard` appears as `~/sdcard` in Ubuntu. (We pass this via the `-e` “extra args” hook to Daijin’s starter, which appends them to its proot command line.)
+With the helper above, your phone’s `/sdcard` is available at `/mnt/sdcard` in Ubuntu. (We pass this via the `-e` “extra args” hook to Daijin’s starter, which appends them to its proot command line.)
 
 ---
 
@@ -183,5 +183,5 @@ pkill -f  'proot .*containers/ubuntu-proot'   # kill
 * Want the sdcard bind permanently from the config? Add to the container’s Daijin `.conf`:
 
   ```
-  extra_args="-b /sdcard:/root/sdcard -w /root"
+  extra_args="-b /sdcard:/mnt/sdcard -w /root"
   ```

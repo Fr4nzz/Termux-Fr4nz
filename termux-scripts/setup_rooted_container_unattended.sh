@@ -41,7 +41,7 @@ cat >"$PREFIX/bin/ubuntu-chroot" <<'SH'
 C="$HOME/containers/ubuntu-chroot"
 TP="/data/data/com.termux/files/usr/tmp/.X11-unix"
 U="$(cat "$C/etc/ruri/user")"
-exec sudo rurima r -m "$TP" /tmp/.X11-unix -m /sdcard /root/sdcard -E "$U" "$C" "$@"
+exec sudo rurima r -m "$TP" /tmp/.X11-unix -m /sdcard /mnt/sdcard -E "$U" "$C" "$@"
 SH
 chmod 0755 "$PREFIX/bin/ubuntu-chroot"
 

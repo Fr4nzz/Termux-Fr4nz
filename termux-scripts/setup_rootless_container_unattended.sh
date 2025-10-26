@@ -13,6 +13,11 @@ if [ ! -x "$PREFIX/share/daijin/proot_start.sh" ]; then
   rm -f daijin-aarch64.deb
 fi
 
+# rurima (if missing)
+if ! command -v rurima >/dev/null 2>&1; then
+  curl -fsSL https://raw.githubusercontent.com/Fr4nzz/Termux-Fr4nz/refs/heads/main/termux-scripts/install_rurima.sh | bash
+fi
+
 # Pull if missing
 [ -d "$C" ] || rurima lxc pull -o ubuntu -v noble -s "$C"
 

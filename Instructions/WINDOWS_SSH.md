@@ -13,8 +13,9 @@ This guide covers:
 On the phone, after cloning this repo:
 
 ```sh
-./setup_termux.sh
-# This installs OpenSSH + zsh, prompts you to set a password, starts sshd, and makes zsh default.
+./termux-scripts/setup_ssh.sh
+# (optional) zsh + OMZ:
+./termux-scripts/install_zsh.sh
 ```
 
 Find your Termux username and phone IP:

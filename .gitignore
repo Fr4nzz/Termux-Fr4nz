@@ -1,1 +1,4 @@
 install_ubuntu.sh
+*.deb
+*.log
+.DS_Store

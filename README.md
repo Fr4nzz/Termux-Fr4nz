@@ -27,6 +27,7 @@ curl -fsSL https://raw.githubusercontent.com/Fr4nzz/Termux-Fr4nz/refs/heads/main
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/Fr4nzz/Termux-Fr4nz/refs/heads/main/termux-scripts/install_rurima.sh | bash
+```
 
 ## Quick start (UNATTENDED)
 
@@ -48,7 +49,7 @@ curl -fsSL https://raw.githubusercontent.com/Fr4nzz/Termux-Fr4nz/refs/heads/main
 **C) R / RStudio / Apps**
 - Install R binaries:  
   `curl -fsSL https://raw.githubusercontent.com/Fr4nzz/Termux-Fr4nz/refs/heads/main/termux-scripts/install_r_binaries_unattended.sh | bash`
-- RStudio Server (also creates Termux wrappers; installs R first if missing):  
+- RStudio Server (installs server + Termux wrappers; installs R first if missing):  
   `curl -fsSL https://raw.githubusercontent.com/Fr4nzz/Termux-Fr4nz/refs/heads/main/termux-scripts/install_rstudio_server_unattended.sh | bash`
 - App manager (Synaptic + enable universe/multiverse):  
   `curl -fsSL https://raw.githubusercontent.com/Fr4nzz/Termux-Fr4nz/refs/heads/main/termux-scripts/install_app_manager_unattended.sh | bash`
@@ -91,7 +92,7 @@ rurima lxc list
 [INSTALL_R_BINARIES.md](./Instructions/INSTALL_R_BINARIES.md)
 
 ## RStudio Server (manual guide)
-[INSTALL_RStudio_aarch64.md](./Instructions/INSTALL_RStudio_aarch64.md)
+[INSTALL_RStudio_Server.md](./Instructions/INSTALL_RStudio_Server.md)
 
 ## Keep Termux from being killed
 

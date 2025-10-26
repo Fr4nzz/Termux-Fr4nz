@@ -243,7 +243,6 @@ The script prints two URLs:
 * `http://127.0.0.1:8787` → open in the phone’s own browser.
 * `http://<phone_ip>:8787` → open from another device on the same Wi-Fi (if we could detect the phone IP).
 Log in as your desktop user (the one saved in `/etc/ruri/user`) after setting a password with `passwd`.
-*Log in as your desktop user (the one saved in `/etc/ruri/user`) after setting a password with `passwd`.*
 
 ---
 
@@ -261,4 +260,3 @@ Log in as your desktop user (the one saved in `/etc/ruri/user`) after setting a 
 - Both `ubuntu-chroot` and `ubuntu-proot` use that file, so you always enter the container as the saved desktop user.
 - `desktopify` reads the same file to decide whose Desktop gets new shortcuts.
 - Duplicated sections in the RUN_X11 guides are removed; `xfce4-chroot-start/stop` no longer `su` because we already enter as the saved user.
-::contentReference[oaicite:0]{index=0}

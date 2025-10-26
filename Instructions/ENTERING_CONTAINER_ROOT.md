@@ -75,7 +75,7 @@ sudo rurima r -E "$U" "$HOME/containers/ubuntu-chroot"
 **Bind /sdcard example (root shell):**
 
 ```bash
-sudo rurima r -m /sdcard /root/sdcard "$HOME/containers/ubuntu-chroot"
+sudo rurima r -m /sdcard /mnt/sdcard "$HOME/containers/ubuntu-chroot"
 ```
 
 ````
@@ -104,7 +104,7 @@ U="$(cat "$C/etc/ruri/user")"
 
 exec sudo rurima r \
   -m "$TP" /tmp/.X11-unix \
-  -m /sdcard /root/sdcard \
+  -m /sdcard /mnt/sdcard \
   -E "$U" \
   "$C" "$@"
 SH

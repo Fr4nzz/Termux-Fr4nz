@@ -36,31 +36,53 @@ curl -fsSL https://raw.githubusercontent.com/Fr4nzz/Termux-Fr4nz/refs/heads/main
 
 **A) Containers**
 - Rooted container:  
-  `curl -fsSL https://raw.githubusercontent.com/Fr4nzz/Termux-Fr4nz/refs/heads/main/termux-scripts/setup_rooted_container_unattended.sh | bash`
+  ```bash
+  curl -fsSL https://raw.githubusercontent.com/Fr4nzz/Termux-Fr4nz/refs/heads/main/termux-scripts/setup_rooted_container_unattended.sh | bash
+  ```
 - Rootless container (proot + Daijin):  
-  `curl -fsSL https://raw.githubusercontent.com/Fr4nzz/Termux-Fr4nz/refs/heads/main/termux-scripts/setup_rootless_container_unattended.sh | bash`
+  ```bash
+  curl -fsSL https://raw.githubusercontent.com/Fr4nzz/Termux-Fr4nz/refs/heads/main/termux-scripts/setup_rootless_container_unattended.sh | bash
+  ```
 
 **B) Desktop (Termux:X11 + XFCE)**
 - Rooted:  
-  `curl -fsSL https://raw.githubusercontent.com/Fr4nzz/Termux-Fr4nz/refs/heads/main/termux-scripts/install_x11_desktop_root_unattended.sh | bash`
+  ```bash
+  curl -fsSL https://raw.githubusercontent.com/Fr4nzz/Termux-Fr4nz/refs/heads/main/termux-scripts/install_x11_desktop_root_unattended.sh | bash
+  ```
 - Rootless:  
-  `curl -fsSL https://raw.githubusercontent.com/Fr4nzz/Termux-Fr4nz/refs/heads/main/termux-scripts/install_x11_desktop_rootless_unattended.sh | bash`
+  ```bash
+  curl -fsSL https://raw.githubusercontent.com/Fr4nzz/Termux-Fr4nz/refs/heads/main/termux-scripts/install_x11_desktop_rootless_unattended.sh | bash
+  ```
 
 **C) R / RStudio / Apps**
 - Install R binaries:  
-  `curl -fsSL https://raw.githubusercontent.com/Fr4nzz/Termux-Fr4nz/refs/heads/main/termux-scripts/install_r_binaries_unattended.sh | bash`
+  ```bash
+  curl -fsSL https://raw.githubusercontent.com/Fr4nzz/Termux-Fr4nz/refs/heads/main/termux-scripts/install_r_binaries_unattended.sh | bash
+  ```
 - RStudio Server (installs server + Termux wrappers; installs R first if missing):  
-  `curl -fsSL https://raw.githubusercontent.com/Fr4nzz/Termux-Fr4nz/refs/heads/main/termux-scripts/install_rstudio_server_unattended.sh | bash`
+  ```bash
+  curl -fsSL https://raw.githubusercontent.com/Fr4nzz/Termux-Fr4nz/refs/heads/main/termux-scripts/install_rstudio_server_unattended.sh | bash
+  ```
 - App manager (Synaptic + enable universe/multiverse):  
-  `curl -fsSL https://raw.githubusercontent.com/Fr4nzz/Termux-Fr4nz/refs/heads/main/termux-scripts/install_app_manager_unattended.sh | bash`
+  ```bash
+  curl -fsSL https://raw.githubusercontent.com/Fr4nzz/Termux-Fr4nz/refs/heads/main/termux-scripts/install_app_manager_unattended.sh | bash
+  ```
 - Desktopify helper:  
-  `curl -fsSL https://raw.githubusercontent.com/Fr4nzz/Termux-Fr4nz/refs/heads/main/termux-scripts/install_desktopify_unattended.sh | bash`
+  ```bash
+  curl -fsSL https://raw.githubusercontent.com/Fr4nzz/Termux-Fr4nz/refs/heads/main/termux-scripts/install_desktopify_unattended.sh | bash
+  ```
 - Firefox (adds Desktop icon):  
-  `curl -fsSL https://raw.githubusercontent.com/Fr4nzz/Termux-Fr4nz/refs/heads/main/termux-scripts/install_firefox_unattended.sh | bash`
+  ```bash
+  curl -fsSL https://raw.githubusercontent.com/Fr4nzz/Termux-Fr4nz/refs/heads/main/termux-scripts/install_firefox_unattended.sh | bash
+  ```
 - VS Code (adds Desktop icon):  
-  `curl -fsSL https://raw.githubusercontent.com/Fr4nzz/Termux-Fr4nz/refs/heads/main/termux-scripts/install_vscode_unattended.sh | bash`
+  ```bash
+  curl -fsSL https://raw.githubusercontent.com/Fr4nzz/Termux-Fr4nz/refs/heads/main/termux-scripts/install_vscode_unattended.sh | bash
+  ```
 - RStudio Desktop (installs R if missing; adds Desktop icon):  
-  `curl -fsSL https://raw.githubusercontent.com/Fr4nzz/Termux-Fr4nz/refs/heads/main/termux-scripts/install_rstudio_desktop_unattended.sh | bash`
+  ```bash
+  curl -fsSL https://raw.githubusercontent.com/Fr4nzz/Termux-Fr4nz/refs/heads/main/termux-scripts/install_rstudio_desktop_unattended.sh | bash
+  ```
 
 ### Where to run which scripts
 

@@ -62,7 +62,13 @@ See [INSTALL_R_BINARIES.md](./INSTALL_R_BINARIES.md)
 
 ## RStudio Server (optional)
 
-See [INSTALL_RStudio_aarch64.md](./INSTALL_RStudio_aarch64.md)
+See [INSTALL_RStudio_aarch64.md](./INSTALL_RStudio_aarch64.md).
+
+That file now also shows how to:
+- install RStudio Server on aarch64 Ubuntu,
+- start it on port 8787 with `rstudio-rootless-start` / `rstudio-root-start`,
+- stop it with `rstudio-rootless-stop` / `rstudio-root-stop`,
+- and open it from Chrome/Firefox on the phone.
 
 ## Keep Termux from being killed
 

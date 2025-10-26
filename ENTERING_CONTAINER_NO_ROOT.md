@@ -64,19 +64,47 @@ Why this matters:
 
 ## 4) Start the container
 
-### Option A — `ubuntu-rootless` helper (binds `/sdcard`, sane env)
+### Option A — `ubuntu-rootless` helper (X11-ready + storage bind)
+
+This wrapper does three things up front:
+- binds `/sdcard` into the container,
+- binds the Termux:X11 socket into `/tmp/.X11-unix`,
+- sets a sane root login environment.
+
+We always include those mounts even if you’re just doing CLI or R/RStudio and not using a desktop yet.  
+Result: you can later launch XFCE/X11 without having to “unmount and re-enter with different args.”
+
+It supports both interactive shells and one-off commands.
 
 ```bash
 P=/data/data/com.termux/files/usr
 cat >"$P/bin/ubuntu-rootless" <<'SH'
 #!/data/data/com.termux/files/usr/bin/sh
+# Enter the rootless Ubuntu container (daijin/proot).
+# - Always bind /sdcard into /mnt/sdcard.
+# - Always bind the Termux:X11 socket into /tmp/.X11-unix.
+# This makes the session immediately ready for things like RStudio Server or XFCE later.
+
+: "${PREFIX:=/data/data/com.termux/files/usr}"
+
 C="/data/data/com.termux/files/home/containers/ubuntu-rootless"
-E="/usr/bin/env -i HOME=/root TERM=xterm-256color \
-PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
-exec "$PREFIX/share/daijin/proot_start.sh" \
-  -r "$C" \
-  -e "-b /sdcard:/root/sdcard -w /root" \
-  $E /bin/su - root -l "$@"
+TP="/data/data/com.termux/files/usr/tmp/.X11-unix"
+
+if [ "$#" -gt 0 ]; then
+  exec "$PREFIX/share/daijin/proot_start.sh" \
+    -r "$C" \
+    -e "-b $TP:/tmp/.X11-unix -b /sdcard:/mnt/sdcard -w /root" \
+    /usr/bin/env -i HOME=/root TERM=xterm-256color \
+    PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin \
+    /bin/bash -lc "$*"
+else
+  exec "$PREFIX/share/daijin/proot_start.sh" \
+    -r "$C" \
+    -e "-b $TP:/tmp/.X11-unix -b /sdcard:/mnt/sdcard -w /root" \
+    /usr/bin/env -i HOME=/root TERM=xterm-256color \
+    PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin \
+    /bin/bash -l
+fi
 SH
 chmod 0755 "$P/bin/ubuntu-rootless"
 hash -r

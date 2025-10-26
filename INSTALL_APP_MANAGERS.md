@@ -183,12 +183,21 @@ desktopify code         # VS Code shortcut
 You only need to run the `desktopify` command again after you install a new app you want on the Desktop.
 
 ---
+## 8) RStudio Desktop (experimental arm64 GUI)
 
-## 7) Recap / tips
+RStudio Desktop is the full IDE window (not the web server). This is optional and still experimental on ARM64, but it can run inside the XFCE session you already launch with `xfce4-user-start` (rooted) or `xfce4-rootless-start` (proot).
 
-* **Synaptic** is fine in both rooted chroot and rootless proot. It's just APT with a GUI.
-* **software-properties-common** gives you `add-apt-repository` so you can enable `universe`, `multiverse`, etc.
-  - In chroot/proot, that CLI path is more reliable than “Software & Updates” GUI, which wants polkit/systemd.
-* **Firefox** should come from Mozilla’s APT repo in here, not Snap.
-* **VS Code** (`code`) comes from Microsoft’s APT repo and runs best under the `ubuntu` desktop user.
-* **desktopify** is your “add icon to Desktop” tool. It works for Synaptic, Firefox, Code, etc.
+### Install (inside the Ubuntu container, as root)
+
+```bash
+set -e
+export DEBIAN_FRONTEND=noninteractive
+apt-get update
+apt-get install -y wget gdebi-core
+
+DEB_URL="https://s3.amazonaws.com/rstudio-ide-build/electron/jammy/arm64/rstudio-2025.11.0-daily-271-arm64.deb"
+wget -O /tmp/rstudio-arm64.deb "$DEB_URL"
+gdebi -n /tmp/rstudio-arm64.deb || apt-get -f install -y
+
+desktopify rstudio # Add icon to desktop
+```

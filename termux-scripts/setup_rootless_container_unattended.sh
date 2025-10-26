@@ -13,11 +13,6 @@ if [ ! -x "$PREFIX/share/daijin/proot_start.sh" ]; then
   rm -f daijin-aarch64.deb
 fi
 
-# rurima (if missing)
-if ! command -v rurima >/dev/null 2>&1; then
-  curl -fsSL https://raw.githubusercontent.com/Fr4nzz/Termux-Fr4nz/refs/heads/main/termux-scripts/install_rurima.sh | bash
-fi
-
 # Pull if missing
 [ -d "$C" ] || rurima lxc pull -o ubuntu -v noble -s "$C"
 
@@ -27,6 +22,12 @@ curl -fsSL https://raw.githubusercontent.com/RuriOSS/daijin/refs/heads/main/src/
       /usr/bin/env -i HOME=/root TERM=xterm-256color \
       PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin \
       /bin/sh
+
+# Base tools inside the container (needed by container-scripts)
+"$PREFIX/share/daijin/proot_start.sh" -r "$C" /bin/sh -lc '
+  export DEBIAN_FRONTEND=noninteractive
+  apt-get update -y
+  apt-get install -y curl ca-certificates gnupg wget'
 
 # User + sudoers + remember + TERM
 "$PREFIX/share/daijin/proot_start.sh" -r "$C" /bin/sh -lc "

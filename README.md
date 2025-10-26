@@ -61,6 +61,13 @@ curl -fsSL https://raw.githubusercontent.com/Fr4nzz/Termux-Fr4nz/refs/heads/main
   `curl -fsSL https://raw.githubusercontent.com/Fr4nzz/Termux-Fr4nz/refs/heads/main/termux-scripts/install_vscode_unattended.sh | bash`
 - RStudio Desktop (installs R if missing; adds Desktop icon):  
   `curl -fsSL https://raw.githubusercontent.com/Fr4nzz/Termux-Fr4nz/refs/heads/main/termux-scripts/install_rstudio_desktop_unattended.sh | bash`
+
+### Where to run which scripts
+
+- `termux-scripts/` → run from **Termux**. These thin wrappers enter the Ubuntu container and call the real installers.
+- `container-scripts/` → run **inside** the Ubuntu container (manually or via the wrappers above).
+
+> The container setup scripts install base tools (`curl`, `ca-certificates`, `gnupg`, `wget`) inside Ubuntu so every `container-scripts/*` helper works immediately.
 ```
 
 ## Usage (common steps)

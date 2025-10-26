@@ -19,6 +19,11 @@ fi
 curl -fsSL https://raw.githubusercontent.com/RuriOSS/daijin/refs/heads/main/src/share/fixup.sh \
   | sudo rurima r "$C" /bin/sh
 
+# Base tools inside the container (needed by container-scripts)
+sudo rurima r "$C" /bin/bash -lc 'export DEBIAN_FRONTEND=noninteractive
+apt-get update -y
+apt-get install -y curl ca-certificates gnupg wget'
+
 # User + sudoers + remember + TERM
 sudo rurima r "$C" /bin/bash -lc "
 set -e

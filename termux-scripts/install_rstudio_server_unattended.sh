@@ -2,8 +2,12 @@
 set -euo pipefail
 : "${PREFIX:=/data/data/com.termux/files/usr}"
 
-# Ensure R exists; if not, install R binaries
-curl -fsSL https://raw.githubusercontent.com/Fr4nzz/Termux-Fr4nz/refs/heads/main/termux-scripts/install_r_binaries_unattended.sh | bash
+WRAP=""; command -v ubuntu-chroot >/dev/null 2>&1 && WRAP="ubuntu-chroot"
+[ -z "$WRAP" ] && command -v ubuntu-proot >/dev/null 2>&1 && WRAP="ubuntu-proot"
+[ -n "$WRAP" ] || { echo "No container wrapper found."; exit 1; }
+
+# Install RStudio Server inside the container (ensures R if missing)
+curl -fsSL https://raw.githubusercontent.com/Fr4nzz/Termux-Fr4nz/refs/heads/main/container-scripts/install_rstudio_server.sh | $WRAP /bin/bash -s
 
 # Create Termux wrappers (both chroot and proot variants)
 mkdir -p "$PREFIX/bin"
@@ -68,4 +72,4 @@ else echo "Not running (no pidfile)."; fi
 SH
 chmod 0755 "$PREFIX/bin/rstudio-chroot-stop"
 
-echo "✅ RStudio Server wrappers ready: rstudio-proot-start/stop, rstudio-chroot-start/stop"
+echo "✅ RStudio Server installed and wrappers ready: rstudio-proot-start/stop, rstudio-chroot-start/stop"

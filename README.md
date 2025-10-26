@@ -89,7 +89,10 @@ curl -fsSL https://raw.githubusercontent.com/Fr4nzz/Termux-Fr4nz/refs/heads/main
 - `termux-scripts/` → run from **Termux**. These thin wrappers enter the Ubuntu container and call the real installers.
 - `container-scripts/` → run **inside** the Ubuntu container (manually or via the wrappers above).
 
-> The container setup scripts install base tools (`curl`, `ca-certificates`, `gnupg`, `wget`) inside Ubuntu so every `container-scripts/*` helper works immediately.
+> During container setup you’ll be prompted for a desktop username (`legend` by default).  
+> To skip the prompt, set an env var first: `export DESKTOP_USER=<name>`.
+
+> The setup scripts also install base tools (`curl`, `ca-certificates`, `gnupg`, `wget`) inside Ubuntu so every `container-scripts/*` helper works immediately.
 ```
 
 ## Usage (common steps)

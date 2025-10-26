@@ -2,7 +2,12 @@
 set -euo pipefail
 : "${PREFIX:=/data/data/com.termux/files/usr}"
 C="${CONTAINER:-$HOME/containers/ubuntu-proot}"
-U="${DESKTOP_USER:-legend}"
+# Prompt for username unless DESKTOP_USER is set
+if [ -n "${DESKTOP_USER:-}" ]; then
+  U="$DESKTOP_USER"
+else
+  read -rp "Desktop username [legend]: " U; U="${U:-legend}"
+fi
 
 pkg update -y >/dev/null || true
 
@@ -13,7 +18,7 @@ if [ ! -x "$PREFIX/share/daijin/proot_start.sh" ]; then
   rm -f daijin-aarch64.deb
 fi
 
-# Pull if missing
+# Pull if missing (assumes rurima already installed)
 [ -d "$C" ] || rurima lxc pull -o ubuntu -v noble -s "$C"
 
 # Fixup
@@ -28,6 +33,18 @@ curl -fsSL https://raw.githubusercontent.com/RuriOSS/daijin/refs/heads/main/src/
   export DEBIAN_FRONTEND=noninteractive
   apt-get update -y
   apt-get install -y curl ca-certificates gnupg wget'
+
+# Base maintainer helpers so adduser & postinsts work
+"$PREFIX/share/daijin/proot_start.sh" -r "$C" /bin/sh -lc '
+  export DEBIAN_FRONTEND=noninteractive
+  apt-get update -y
+  apt-get install -y --no-install-recommends debconf
+  apt-get install -y --reinstall --no-install-recommends \
+    debconf-i18n init-system-helpers perl-base adduser dialog locales tzdata
+  apt-get install -y --reinstall --no-install-recommends sgml-base xml-core
+  dpkg --configure -a || true
+  apt-get -o Dpkg::Options::="--force-confnew" -f install
+'
 
 # User + sudoers + remember + TERM
 "$PREFIX/share/daijin/proot_start.sh" -r "$C" /bin/sh -lc "

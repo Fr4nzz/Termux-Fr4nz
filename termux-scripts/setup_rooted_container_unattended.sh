@@ -2,17 +2,17 @@
 set -euo pipefail
 : "${PREFIX:=/data/data/com.termux/files/usr}"
 C="${CONTAINER:-$HOME/containers/ubuntu-chroot}"
-U="${DESKTOP_USER:-legend}"
+# Prompt for username unless DESKTOP_USER is set
+if [ -n "${DESKTOP_USER:-}" ]; then
+  U="$DESKTOP_USER"
+else
+  read -rp "Desktop username [legend]: " U; U="${U:-legend}"
+fi
 
 pkg update -y >/dev/null || true
 pkg install -y tsu >/dev/null
 
-# rurima (if missing)
-if ! command -v rurima >/dev/null 2>&1; then
-  curl -fsSL https://raw.githubusercontent.com/Fr4nzz/Termux-Fr4nz/refs/heads/main/termux-scripts/install_rurima.sh | bash
-fi
-
-# Pull if missing
+# Pull if missing (assumes rurima already installed)
 [ -d "$C" ] || rurima lxc pull -o ubuntu -v noble -s "$C"
 
 # Fixup
@@ -23,6 +23,21 @@ curl -fsSL https://raw.githubusercontent.com/RuriOSS/daijin/refs/heads/main/src/
 sudo rurima r "$C" /bin/bash -lc 'export DEBIAN_FRONTEND=noninteractive
 apt-get update -y
 apt-get install -y curl ca-certificates gnupg wget'
+
+# Base maintainer helpers so adduser & postinsts work
+sudo rurima r "$C" /bin/bash -lc 'export DEBIAN_FRONTEND=noninteractive
+apt-get update -y
+# dpkg/apt helpers first
+apt-get install -y --no-install-recommends debconf
+# common helpers (adduser needs perl; many postinsts need these)
+apt-get install -y --reinstall --no-install-recommends \
+  debconf-i18n init-system-helpers perl-base adduser dialog locales tzdata
+# sgml/xml helper (provides update-catalog) used by various postinsts
+apt-get install -y --reinstall --no-install-recommends sgml-base xml-core
+# settle anything pending
+dpkg --configure -a || true
+apt-get -o Dpkg::Options::="--force-confnew" -f install
+'
 
 # User + sudoers + remember + TERM
 sudo rurima r "$C" /bin/bash -lc "

@@ -73,18 +73,6 @@ sudo chmod +x /usr/sbin/policy-rc.d
 
 sudo apt-get update -y
 
-# Ensure debconf/dpkg helpers exist BEFORE anything else
-sudo apt-get install -y --no-install-recommends debconf
-
-# Common helpers many postinsts need
-sudo apt-get install -y --reinstall --no-install-recommends \
-  debconf-i18n init-system-helpers perl-base adduser dialog locales tzdata
-
-# sgml/xml helpers (provides update-catalog) then settle anything pending
-sudo apt-get install -y --reinstall --no-install-recommends sgml-base xml-core
-sudo dpkg --configure -a || true
-sudo apt-get -o Dpkg::Options::="--force-confnew" -f install
-
 # Desktop bits (CORE) — explicitly include xfce4-session
 sudo apt-get install -y --no-install-recommends \
   xfce4 xfce4-session xfce4-terminal \

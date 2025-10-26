@@ -2,11 +2,11 @@
 set -euo pipefail
 : "${PREFIX:=/data/data/com.termux/files/usr}"
 C="${CONTAINER:-$HOME/containers/ubuntu-chroot}"
-# Prompt for username unless DESKTOP_USER is set
-if [ -n "${DESKTOP_USER:-}" ]; then
-  U="$DESKTOP_USER"
-else
-  read -rp "Desktop username [legend]: " U; U="${U:-legend}"
+U="${DESKTOP_USER:-}"
+
+if [ -z "$U" ]; then
+  read -rp "Desktop username [legend]: " U
+  U="${U:-legend}"
 fi
 
 pkg update -y >/dev/null || true
@@ -61,7 +61,11 @@ cat >"$PREFIX/bin/ubuntu-chroot" <<'SH'
 C="$HOME/containers/ubuntu-chroot"
 TP="/data/data/com.termux/files/usr/tmp/.X11-unix"
 U="$(cat "$C/etc/ruri/user")"
-exec sudo rurima r -m "$TP" /tmp/.X11-unix -m /sdcard /mnt/sdcard -E "$U" "$C" "$@"
+if [ "$#" -gt 0 ]; then
+  exec sudo rurima r -m "$TP" /tmp/.X11-unix -m /sdcard /mnt/sdcard -E "$U" "$C" "$@"
+else
+  exec sudo rurima r -m "$TP" /tmp/.X11-unix -m /sdcard /mnt/sdcard -E "$U" "$C" /bin/bash -l
+fi
 SH
 chmod 0755 "$PREFIX/bin/ubuntu-chroot"
 

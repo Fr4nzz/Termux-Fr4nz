@@ -65,9 +65,12 @@ cat <<SH | "$PREFIX/share/daijin/proot_start.sh" -r "$C" \
   /bin/sh
 set -e
 U="$U"
-case "$U" in
-  ''|-*|*[^A-Za-z0-9_.@-]*|*'$'*?*) echo "Invalid username: $U"; exit 1;;
-esac
+if [ -z "$U" ] || printf '%s' "$U" | grep -Eq '^-'; then
+  echo "Invalid username: $U"; exit 1
+fi
+if ! printf '%s' "$U" | grep -Eq '^[A-Za-z0-9_.@-]+$'; then
+  echo "Invalid username: $U"; exit 1
+fi
 /usr/sbin/adduser --disabled-password --gecos '' "$U" || true
 /usr/sbin/adduser "$U" sudo || true
 /usr/bin/install -d -m0755 /etc/sudoers.d

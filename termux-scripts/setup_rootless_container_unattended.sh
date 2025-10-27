@@ -2,6 +2,7 @@
 set -euo pipefail
 : "${PREFIX:=/data/data/com.termux/files/usr}"
 C="${CONTAINER:-$HOME/containers/ubuntu-proot}"
+U="${DESKTOP_USER:-}"
 
 if [ -z "$U" ]; then
   read -rp "Desktop username [legend]: " U </dev/tty || true

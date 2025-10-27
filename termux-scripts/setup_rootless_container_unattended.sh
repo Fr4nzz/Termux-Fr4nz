@@ -86,25 +86,34 @@ SH
 # Wrappers
 TP="$PREFIX/tmp/.X11-unix"
 mkdir -p "$TP" "$PREFIX/bin"
+
 cat >"$PREFIX/bin/ubuntu-proot" <<'SH'
 #!/data/data/com.termux/files/usr/bin/sh
+# Wrapper for entering/running commands inside the ubuntu-proot container.
 : "${PREFIX:=/data/data/com.termux/files/usr}"
 C="/data/data/com.termux/files/home/containers/ubuntu-proot"
 TP="$PREFIX/tmp/.X11-unix"
 [ -d "$TP" ] || mkdir -p "$TP"
+
+# Default user is root until we record one
 U="root"
 [ -f "$C/etc/ruri/user" ] && U="$(cat "$C/etc/ruri/user")"
-if [ "$#" -gt 0 ]; then
-  exec "$PREFIX/share/daijin/proot_start.sh" \
-    -r "$C" \
-    -e "-b $TP:/tmp/.X11-unix -b /sdcard:/mnt/sdcard -w /root" \
-    /bin/su - "$U" -s /bin/sh -c 'exec "$@"' sh -- "$@"
-else
-  exec "$PREFIX/share/daijin/proot_start.sh" \
-    -r "$C" \
-    -e "-b $TP:/tmp/.X11-unix -b /sdcard:/mnt/sdcard -w /root" \
-    /bin/su - "$U"
+
+PROOT="$PREFIX/share/daijin/proot_start.sh"
+BIND="-b $TP:/tmp/.X11-unix -b /sdcard:/mnt/sdcard -w /root"
+
+if [ "$#" -eq 0 ]; then
+  # Interactive login shell
+  exec "$PROOT" -r "$C" -e "$BIND" /bin/su - "$U"
 fi
+
+# If stdin is a pipe and caller asked for /bin/sh (or sh), preserve stdin
+if [ ! -t 0 ] && { [ "$1" = "/bin/sh" ] || [ "$1" = "sh" ] || [ "$1" = "-" ]; }; then
+  exec "$PROOT" -r "$C" -e "$BIND" /bin/su - "$U" -s /bin/sh
+fi
+
+# Otherwise run the provided command with args
+exec "$PROOT" -r "$C" -e "$BIND" /bin/su - "$U" -s /bin/sh -c 'exec "$@"' sh -- "$@"
 SH
 chmod 0755 "$PREFIX/bin/ubuntu-proot"
 

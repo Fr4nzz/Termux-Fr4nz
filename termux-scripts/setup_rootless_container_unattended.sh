@@ -60,18 +60,22 @@ apt-get -o Dpkg::Options::="--force-confnew" -f install
 SH
 
 # User + sudoers + remember + TERM
-cat <<SH | "$PREFIX/share/daijin/proot_start.sh" -r "$C" /bin/sh
+cat <<'SH' | "$PREFIX/share/daijin/proot_start.sh" -r "$C" \
+  /usr/bin/env -i HOME=/root TERM=xterm-256color \
+  PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin \
+  /bin/sh
 set -e
-U='$U'
-adduser --disabled-password --gecos '' "$U" || true
-adduser "$U" sudo || true
+U='"$U"'
+/usr/sbin/adduser --disabled-password --gecos '' "$U" || true
+/usr/sbin/adduser "$U" sudo || true
+/usr/bin/install -d -m0755 /etc/sudoers.d
 echo "$U ALL=(ALL) NOPASSWD: ALL" > /etc/sudoers.d/99-$U
-chmod 0440 /etc/sudoers.d/99-$U
-install -d -m0755 /etc/ruri
+/bin/chmod 0440 /etc/sudoers.d/99-$U
+/usr/bin/install -d -m0755 /etc/ruri
 printf '%s\n' "$U" > /etc/ruri/user
-install -d -m0700 -o "$U" -g "$U" /home/"$U"/.run
+/usr/bin/install -d -m0700 -o "$U" -g "$U" /home/"$U"/.run
 echo 'export TERM=xterm-256color' >> /root/.bashrc
-su - "$U" -c "echo 'export TERM=xterm-256color' >> ~/.bashrc"
+/bin/su - "$U" -c "echo 'export TERM=xterm-256color' >> ~/.bashrc"
 SH
 
 # Wrappers

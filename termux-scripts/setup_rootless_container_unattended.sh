@@ -51,21 +51,23 @@ cat <<'SH' | "$PREFIX/share/daijin/proot_start.sh" -r "$C" \
 set -e
 export DEBIAN_FRONTEND=noninteractive
 apt-get update -y
-apt-get install -y --no-install-recommends debconf
-apt-get install -y --reinstall --no-install-recommends \
-  debconf-i18n init-system-helpers perl-base adduser dialog locales tzdata
-apt-get install -y --reinstall --no-install-recommends sgml-base xml-core
+apt-get install -y --no-install-recommends \
+  debconf debconf-i18n init-system-helpers perl-base adduser dialog locales tzdata \
+  sgml-base xml-core
 dpkg --configure -a || true
 apt-get -o Dpkg::Options::="--force-confnew" -f install
 SH
 
 # User + sudoers + remember + TERM
-cat <<'SH' | "$PREFIX/share/daijin/proot_start.sh" -r "$C" \
+cat <<SH | "$PREFIX/share/daijin/proot_start.sh" -r "$C" \
   /usr/bin/env -i HOME=/root TERM=xterm-256color \
   PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin \
   /bin/sh
 set -e
-U='"$U"'
+U="$U"
+case "$U" in
+  ''|-*|*[^A-Za-z0-9_.@-]*|*'$'*?*) echo "Invalid username: $U"; exit 1;;
+esac
 /usr/sbin/adduser --disabled-password --gecos '' "$U" || true
 /usr/sbin/adduser "$U" sudo || true
 /usr/bin/install -d -m0755 /etc/sudoers.d
@@ -93,7 +95,7 @@ if [ "$#" -gt 0 ]; then
   exec "$PREFIX/share/daijin/proot_start.sh" \
     -r "$C" \
     -e "-b $TP:/tmp/.X11-unix -b /sdcard:/mnt/sdcard -w /root" \
-    /bin/su - "$U" -c "$*"
+    /bin/su - "$U" -s /bin/sh -c 'exec "$@"' sh -- "$@"
 else
   exec "$PREFIX/share/daijin/proot_start.sh" \
     -r "$C" \

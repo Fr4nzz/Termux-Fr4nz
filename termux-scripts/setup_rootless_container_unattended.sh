@@ -2,11 +2,10 @@
 set -euo pipefail
 : "${PREFIX:=/data/data/com.termux/files/usr}"
 C="${CONTAINER:-$HOME/containers/ubuntu-proot}"
-# Prompt for username unless DESKTOP_USER is set
-if [ -n "${DESKTOP_USER:-}" ]; then
-  U="$DESKTOP_USER"
-else
-  read -rp "Desktop username [legend]: " U; U="${U:-legend}"
+
+if [ -z "$U" ]; then
+  read -rp "Desktop username [legend]: " U </dev/tty || true
+  U="${U:-legend}"
 fi
 
 pkg update -y >/dev/null || true

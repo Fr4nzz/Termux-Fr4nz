@@ -5,7 +5,7 @@ C="${CONTAINER:-$HOME/containers/ubuntu-chroot}"
 U="${DESKTOP_USER:-}"
 
 if [ -z "$U" ]; then
-  read -rp "Desktop username [legend]: " U
+  read -rp "Desktop username [legend]: " U </dev/tty || true
   U="${U:-legend}"
 fi
 

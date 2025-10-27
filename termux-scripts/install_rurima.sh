@@ -22,14 +22,20 @@ if [ -x "${PREFIX:-}/bin/pkg" ]; then
         git submodule update --init --recursive
         ./autogen.sh
         CPPFLAGS="$(pkg-config --cflags libseccomp libcap 2>/dev/null || true)" \
-        LDFLAGS="$(pkg-config --libs libseccomp libcap 2>/dev/null || true)" \
+        CFLAGS="${CFLAGS:-} -fPIE" \
+        LDFLAGS="-pie $(pkg-config --libs libseccomp libcap 2>/dev/null || true)" \
         ./configure --prefix="$PREFIX"
         make -j"$(nproc 2>/dev/null || echo 1)"
-        # Install rurima directly to bin (no wrapper required).
-        install -Dm755 ./rurima "$PREFIX/bin/rurima"
+        install -Dm755 ./rurima "$PREFIX/libexec/rurima.real"
+        cat >"$PREFIX/bin/rurima" <<'SH'
+#!/data/data/com.termux/files/usr/bin/sh
+PREFIX=/data/data/com.termux/files/usr
+exec "$PREFIX/libexec/rurima.real" "$@"
+SH
+        chmod 0755 "$PREFIX/bin/rurima"
         hash -r || true
     )
-    echo "[*] rurima installed to $PREFIX/bin/rurima"
+    echo "[*] rurima installed: wrapper => $PREFIX/bin/rurima, real => $PREFIX/libexec/rurima.real"
 
     echo "[*] Done."
     exit 0

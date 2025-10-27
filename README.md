@@ -60,9 +60,14 @@ curl -fsSL https://raw.githubusercontent.com/Fr4nzz/Termux-Fr4nz/refs/heads/main
   curl -fsSL https://raw.githubusercontent.com/Fr4nzz/Termux-Fr4nz/refs/heads/main/termux-scripts/install_r_binaries_unattended.sh | bash
   ```
 - RStudio Server (installs server + Termux wrappers; installs R first if missing):  
-  ```bash
-  curl -fsSL https://raw.githubusercontent.com/Fr4nzz/Termux-Fr4nz/refs/heads/main/termux-scripts/install_rstudio_server_unattended.sh | bash
-  ```
+  - Rootless (proot + Daijin):
+    ```bash
+    curl -fsSL https://raw.githubusercontent.com/Fr4nzz/Termux-Fr4nz/refs/heads/main/termux-scripts/install_rstudio_server_proot_unattended.sh | bash
+    ```
+  - Rooted (rurima/ruri chroot):
+    ```bash
+    curl -fsSL https://raw.githubusercontent.com/Fr4nzz/Termux-Fr4nz/refs/heads/main/termux-scripts/install_rstudio_server_chroot_unattended.sh | bash
+    ```
 - App manager (Synaptic + enable universe/multiverse):  
   ```bash
   curl -fsSL https://raw.githubusercontent.com/Fr4nzz/Termux-Fr4nz/refs/heads/main/termux-scripts/install_app_manager_unattended.sh | bash

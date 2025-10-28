@@ -83,12 +83,23 @@ PREFIX="${PREFIX:-/data/data/com.termux/files/usr}"
 C="$HOME/containers/ubuntu-chroot"
 TP="$PREFIX/tmp/.X11-unix"
 [ -d "$TP" ] || mkdir -p "$TP"
-U="root"
+
 [ -f "$C/etc/ruri/user" ] && U="$(cat "$C/etc/ruri/user")"
+
 if [ "$#" -gt 0 ]; then
-  exec sudo rurima r -m "$TP" /tmp/.X11-unix -m /sdcard /mnt/sdcard -E "$U" "$C" "$@"
+  # Non-interactive: run a command AS that user
+  # Strategy:
+  #   sudo rurima r ... "$C" /bin/su - "$U" -c "<your command>"
+  exec sudo rurima r \
+    -m "$TP" /tmp/.X11-unix \
+    -m /sdcard /mnt/sdcard \
+    "$C" /bin/su - "$U" -c "$*"
 else
-  exec sudo rurima r -m "$TP" /tmp/.X11-unix -m /sdcard /mnt/sdcard -E "$U" "$C" /bin/bash -l
+  # Interactive login shell as $U
+  exec sudo rurima r \
+    -m "$TP" /tmp/.X11-unix \
+    -m /sdcard /mnt/sdcard \
+    "$C" /bin/su - "$U"
 fi
 SH
 chmod 0755 "$PREFIX/bin/ubuntu-chroot"

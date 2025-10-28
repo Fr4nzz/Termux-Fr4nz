@@ -70,34 +70,34 @@ chmod 0755 "$BIN/x11-down"
 
 # --- Minimal base in Ubuntu (proot) to keep postinsts quiet; idempotent ---
 echo "[setup] Preparing Ubuntu (proot) base packages …"
-cat <<'SH' | ubuntu-proot /bin/su - root -s /bin/sh
+cat <<'SH' | ubuntu-proot /bin/sh
 set -e
 export DEBIAN_FRONTEND=noninteractive
 export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 
 # Prevent noisy service autostarts in proot
-install -d /usr/sbin
-cat >/usr/sbin/policy-rc.d <<'EOF'
+sudo install -d /usr/sbin
+sudo tee /usr/sbin/policy-rc.d >/dev/null <<'EOF'
 #!/bin/sh
 exit 101
 EOF
-chmod +x /usr/sbin/policy-rc.d
+sudo chmod +x /usr/sbin/policy-rc.d
 
-apt-get update -y
-apt-get install -y --no-install-recommends \
+sudo apt-get update -y
+sudo apt-get install -y --no-install-recommends \
   debconf debconf-i18n init-system-helpers perl-base adduser dialog locales tzdata \
   sgml-base xml-core
 
 # Desktop core (no-op if already present)
-apt-get install -y --no-install-recommends \
+sudo apt-get install -y --no-install-recommends \
   xfce4 xfce4-session xfce4-terminal \
   dbus dbus-x11 xterm fonts-dejavu-core x11-utils psmisc
 
 # Locale + dbus prep (idempotent)
-sed -i 's/^# *en_US.UTF-8 UTF-8/en_US.UTF-8 UTF-8/' /etc/locale.gen || true
-locale-gen en_US.UTF-8
-dbus-uuidgen --ensure
-install -d -m 0755 /run/dbus
+sudo sed -i 's/^# *en_US.UTF-8 UTF-8/en_US.UTF-8 UTF-8/' /etc/locale.gen || true
+sudo locale-gen en_US.UTF-8
+sudo dbus-uuidgen --ensure
+sudo install -d -m 0755 /run/dbus
 SH
 
 # --- xfce4 start/stop wrappers (rootless/proot) ---

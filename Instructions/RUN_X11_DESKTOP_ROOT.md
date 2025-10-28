@@ -36,7 +36,7 @@ pkg install -y pulseaudio xkeyboard-config
 ```bash
 am broadcast -a com.termux.x11.ACTION_STOP -p com.termux.x11 || true
 pkill termux-x11 || true
-rm -rf "$PREFIX/tmp/.X11-unix"; mkdir -p "$PREFIX/tmp/.X11-unix"
+mkdir -p "$PREFIX/tmp/.X11-unix"
 
 export TMPDIR="$PREFIX/tmp"
 termux-x11 :1 -legacy-drawing &
@@ -187,7 +187,7 @@ P="$PREFIX"; S="$P/tmp/.X11-unix"
 [ -S "$S/X1" ] || {
   am broadcast -a com.termux.x11.ACTION_STOP -p com.termux.x11 >/dev/null 2>&1 || true
   pkill termux-x11 >/dev/null 2>&1 || true
-  rm -rf "$S"; mkdir -p "$S"
+  mkdir -p "$S"
   TMPDIR="$P/tmp" termux-x11 :1 -legacy-drawing >/dev/null 2>&1 &
   am start -n com.termux.x11/com.termux.x11.MainActivity >/dev/null 2>&1
   sleep 2

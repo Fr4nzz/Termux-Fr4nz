@@ -19,7 +19,7 @@ set -e
 echo "[x11-up] stopping any running Termux:X11 and cleaning sockets…"
 am broadcast -a com.termux.x11.ACTION_STOP -p com.termux.x11 || true
 pkill termux-x11 || true
-rm -rf "$PREFIX/tmp/.X11-unix"; mkdir -p "$PREFIX/tmp/.X11-unix"
+mkdir -p "$PREFIX/tmp/.X11-unix"
 
 echo "[x11-up] starting Termux:X11 on :1 (legacy drawing)…"
 TMPDIR="$PREFIX/tmp" termux-x11 :1 -legacy-drawing &
@@ -55,7 +55,6 @@ echo "[x11-down] stopping Termux:X11 …"
 am broadcast -a com.termux.x11.ACTION_STOP -p com.termux.x11 || true
 pkill termux-x11 || true
 echo "[x11-down] cleaning sockets …"
-rm -rf "$PREFIX/tmp/.X11-unix" || true
 mkdir -p "$PREFIX/tmp/.X11-unix"
 SH
 chmod 0755 "$BIN/x11-down"

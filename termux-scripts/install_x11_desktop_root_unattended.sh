@@ -29,7 +29,7 @@ TMPDIR="$T" termux-x11 :1 -legacy-drawing &
 echo "[x11-up] bringing Termux:X11 activity to foreground…"
 am start -n com.termux.x11/com.termux.x11.MainActivity || true
 
-# Wait up to 6s for X1 to appear
+# Wait up to ~6s for the :1 socket to exist
 echo "[x11-up] waiting for $S/X1 …"
 for i in $(seq 1 60); do
   [ -S "$S/X1" ] && { echo "[x11-up] OK: X1 path socket present."; break; }
@@ -77,35 +77,38 @@ set -e
 export DEBIAN_FRONTEND=noninteractive
 export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 
-# Prevent service autostarts in chroot (quiet postinsts)
-install -d /usr/sbin
-cat >/usr/sbin/policy-rc.d <<EOF
+# Prevent service autostarts in chroot (quiet postinst scripts)
+sudo install -d /usr/sbin
+sudo tee /usr/sbin/policy-rc.d >/dev/null <<EOF
 #!/bin/sh
 exit 101
 EOF
-chmod +x /usr/sbin/policy-rc.d
+sudo chmod +x /usr/sbin/policy-rc.d
 
-apt-get update -y
-apt-get install -y --no-install-recommends \
+sudo apt-get update -y
+
+# Make sure base maintainer tools exist (some minimal images miss pieces)
+sudo apt-get install -y --no-install-recommends \
   debconf debconf-i18n init-system-helpers perl-base adduser dialog locales tzdata \
   sgml-base xml-core
 
-dpkg --configure -a || true
-apt-get -o Dpkg::Options::="--force-confnew" -f install
+# Repair half-configured packages if apt died earlier
+sudo dpkg --configure -a || true
+sudo apt-get -o Dpkg::Options::="--force-confnew" -f install
 
 # Desktop core
-apt-get install -y --no-install-recommends \
+sudo apt-get install -y --no-install-recommends \
   xfce4 xfce4-session xfce4-terminal \
   dbus dbus-x11 xterm fonts-dejavu-core x11-utils psmisc
 
 # Locale + dbus prep
-sed -i "s/^# *en_US.UTF-8 UTF-8/en_US.UTF-8 UTF-8/" /etc/locale.gen || true
-locale-gen en_US.UTF-8
-dbus-uuidgen --ensure
-install -d -m 0755 /run/dbus
+sudo sed -i "s/^# *en_US.UTF-8 UTF-8/en_US.UTF-8 UTF-8/" /etc/locale.gen || true
+sudo locale-gen en_US.UTF-8
+sudo dbus-uuidgen --ensure
+sudo install -d -m 0755 /run/dbus
 '
 
-# --- xfce4 start/stop wrappers for chroot (non-root user only) ---
+# --- xfce4 start/stop wrappers (runtime) ---
 cat >"$BIN/xfce4-chroot-start" <<'SH'
 #!/data/data/com.termux/files/usr/bin/sh
 set -e
@@ -120,54 +123,46 @@ echo "[xfce4-chroot-start] using DISPLAY=$D"
 
 ubuntu-chroot /bin/bash -lc "
 set -e
-echo '[xfce4-chroot-start] inside Ubuntu (root). Preparing mounts & runtime…'
-# Minimal mounts (idempotent)
-mountpoint -q /proc || mount -t proc proc /proc
-mountpoint -q /sys  || mount -t sysfs sys /sys
-mkdir -p /dev/pts /dev/shm /run /tmp/.ICE-unix
-mountpoint -q /dev/pts || mount -t devpts devpts /dev/pts
-mountpoint -q /dev/shm || mount -t tmpfs -o rw,nosuid,nodev,mode=1777,size=256M tmpfs /dev/shm
-chmod 1777 /tmp/.ICE-unix
+echo \"[xfce4-chroot-start] inside Ubuntu. Preparing mounts & runtime…\"
 
-# Require a non-root desktop user
-if [ ! -s /etc/ruri/user ]; then
-  echo '[xfce4-chroot-start] ERROR: /etc/ruri/user not found. Create your desktop user and record it:' >&2
-  echo '  adduser <name> && adduser <name> sudo && printf %s <name> | tee /etc/ruri/user' >&2
-  exit 1
-fi
-U=\"\$(cat /etc/ruri/user)\"
-if [ \"\$U\" = 'root' ]; then
-  echo '[xfce4-chroot-start] ERROR: Desktop user is root; set a non-root user in /etc/ruri/user.' >&2
-  exit 1
-fi
-if ! id \"\$U\" >/dev/null 2>&1; then
-  echo \"[xfce4-chroot-start] ERROR: user '\$U' does not exist. Create it: adduser \$U && adduser \$U sudo\" >&2
-  exit 1
-fi
-echo \"[xfce4-chroot-start] target desktop user: \$U\"
+# Mount /proc, /sys, /dev/pts, tmpfs /dev/shm, etc. Needs root.
+sudo mountpoint -q /proc || sudo mount -t proc proc /proc
+sudo mountpoint -q /sys  || sudo mount -t sysfs sys /sys
+sudo mkdir -p /dev/pts /dev/shm /run /tmp/.ICE-unix
+sudo mountpoint -q /dev/pts || sudo mount -t devpts devpts /dev/pts
+sudo mountpoint -q /dev/shm || sudo mount -t tmpfs -o rw,nosuid,nodev,mode=1777,size=256M tmpfs /dev/shm
+sudo chmod 1777 /tmp/.ICE-unix
 
-echo '[xfce4-chroot-start] starting XFCE as non-root user…'
-su - \"\$U\" -s /bin/bash -c '
-  set -e
-  echo \"[xfce4-chroot-start] user is \$(id -un):\$(id -gn)\"
-  # ===== Session env (propagates to apps launched from the menu) =====
-  export DISPLAY=\"'$D'\" 
-  export LANG=en_US.UTF-8
-  export LC_ALL=en_US.UTF-8
-  export GDK_BACKEND=x11
-  export QT_QPA_PLATFORM=xcb
-  export QT_XCB_NO_MITSHM=1
-  export LIBGL_ALWAYS_SOFTWARE=1
-  export GTK_USE_PORTAL=0
-  export NO_AT_BRIDGE=1
-  export ELECTRON_OZONE_PLATFORM_HINT=x11
+U_SAVED=\"\$(cat /etc/ruri/user 2>/dev/null || echo '')\"
+U_CURR=\"\$(id -un)\"
 
-  mkdir -p \"\$HOME/.run\" && chmod 700 \"\$HOME/.run\"
-  export XDG_RUNTIME_DIR=\"\$HOME/.run\"
-  command -v xfce4-session
-  echo \"[xfce4-chroot-start] launching xfce4-session via dbus-run-session (DISPLAY=\$DISPLAY)…\"
-  exec dbus-run-session -- bash -lc \"xfce4-session\"
-'
+if [ -n \"\$U_SAVED\" ] && [ \"\$U_SAVED\" != \"\$U_CURR\" ]; then
+  echo \"[xfce4-chroot-start] WARNING: current user '\$U_CURR' != saved desktop user '\$U_SAVED'.\"
+  echo \"[xfce4-chroot-start] Continuing anyway as '\$U_CURR'.\"
+fi
+
+echo \"[xfce4-chroot-start] launching XFCE as '\$U_CURR' …\"
+
+# Session env (propagates to launched apps)
+export DISPLAY=$D
+export LANG=en_US.UTF-8
+export LC_ALL=en_US.UTF-8
+export GDK_BACKEND=x11
+export QT_QPA_PLATFORM=xcb
+export QT_XCB_NO_MITSHM=1
+export LIBGL_ALWAYS_SOFTWARE=1
+export GTK_USE_PORTAL=0
+export NO_AT_BRIDGE=1
+export ELECTRON_OZONE_PLATFORM_HINT=x11
+
+# Per-user runtime dir (needed for a lot of desktop apps)
+mkdir -p \"\$HOME/.run\" && chmod 700 \"\$HOME/.run\"
+export XDG_RUNTIME_DIR=\"\$HOME/.run\"
+
+command -v xfce4-session >/dev/null || { echo \"xfce4-session not installed (run install_x11_desktop_root_unattended.sh first).\"; exit 1; }
+
+echo \"[xfce4-chroot-start] starting xfce4-session via dbus-run-session (DISPLAY=\$DISPLAY)…\"
+exec dbus-run-session -- bash -lc \"xfce4-session\"
 "
 SH
 chmod 0755 "$BIN/xfce4-chroot-start"

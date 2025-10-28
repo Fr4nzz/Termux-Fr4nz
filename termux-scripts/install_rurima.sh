@@ -26,17 +26,14 @@ if [ -x "${PREFIX:-}/bin/pkg" ]; then
         LDFLAGS="-pie $(pkg-config --libs libseccomp libcap 2>/dev/null || true)" \
         ./configure --prefix="$PREFIX"
         make -j"$(nproc 2>/dev/null || echo 1)"
-        install -Dm755 ./rurima "$PREFIX/libexec/rurima.real"
-        cat >"$PREFIX/bin/rurima" <<'SH'
-#!/data/data/com.termux/files/usr/bin/sh
-PREFIX=/data/data/com.termux/files/usr
-exec "$PREFIX/libexec/rurima.real" "$@"
-SH
-        chmod 0755 "$PREFIX/bin/rurima"
+
+        # Install binary directly to $PREFIX/bin (overwrite any previous wrapper)
+        install -Dm755 ./rurima "$PREFIX/bin/rurima"
+
+        # Refresh shell hash table
         hash -r || true
     )
-    echo "[*] rurima installed: wrapper => $PREFIX/bin/rurima, real => $PREFIX/libexec/rurima.real"
-
+    echo "[*] rurima installed to: $PREFIX/bin/rurima"
     echo "[*] Done."
     exit 0
 fi

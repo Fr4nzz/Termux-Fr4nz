@@ -1,127 +1,164 @@
 #!/data/data/com.termux/files/usr/bin/bash
 set -euo pipefail
-: "${PREFIX:=/data/data/com.termux/files/usr}"
-C="${CONTAINER:-$HOME/containers/ubuntu-proot}"
-U="${DESKTOP_USER:-}"
 
-if [ -z "$U" ]; then
-  read -rp "Desktop username [legend]: " U </dev/tty || true
-  U="${U:-legend}"
-fi
+echo "[setup] Termux prerequisites for X11…"
+pkg update -y
+pkg install -y x11-repo
+pkg install -y termux-x11-nightly xorg-xhost xorg-xdpyinfo
 
-pkg update -y >/dev/null || true
+# --- Paths ---
+PFX="${PREFIX:-/data/data/com.termux/files/usr}"
+BIN="$PFX/bin"
+XSOCK="$PFX/tmp/.X11-unix"
+mkdir -p "$BIN" "$XSOCK"
 
-# Daijin (if missing)
-if [ ! -x "$PREFIX/share/daijin/proot_start.sh" ]; then
-  tmpdeb="$PREFIX/tmp/daijin-aarch64.deb"
-  mkdir -p "$PREFIX/tmp"
-  curl -fsSL -o "$tmpdeb" \
-    https://github.com/RuriOSS/daijin/releases/download/daijin-v1.5-rc1/daijin-aarch64.deb
-  (apt install -y "$tmpdeb" 2>/dev/null) \
-    || (dpkg -i "$tmpdeb" || true; apt -f install -y)
-  rm -f "$tmpdeb"
-fi
-
-# Pull if missing (assumes rurima already installed)
-[ -d "$C" ] || rurima lxc pull -o ubuntu -v noble -s "$C"
-
-# Fixup
-curl -fsSL https://raw.githubusercontent.com/RuriOSS/daijin/refs/heads/main/src/share/fixup.sh \
-  | "$PREFIX/share/daijin/proot_start.sh" -r "$C" \
-      /usr/bin/env -i HOME=/root TERM=xterm-256color \
-      PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin \
-      /bin/sh
-
-# Base tools inside the container (needed by container-scripts)
-cat <<'SH' | "$PREFIX/share/daijin/proot_start.sh" -r "$C" \
-  /usr/bin/env -i HOME=/root TERM=xterm-256color \
-  PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin \
-  /bin/sh
+# --- x11-up: Start Termux:X11 on :1 only, show logs, store display ---
+cat >"$BIN/x11-up" <<'SH'
+#!/data/data/com.termux/files/usr/bin/sh
 set -e
-export DEBIAN_FRONTEND=noninteractive
-apt-get update -y
-apt-get install -y curl ca-certificates gnupg wget
+T="$PREFIX/tmp"     # where Termux:X11 puts its socket
+S="$T/.X11-unix"
+
+echo "[x11-up] stopping any running Termux:X11 and cleaning sockets…"
+am broadcast -a com.termux.x11.ACTION_STOP -p com.termux.x11 || true
+pkill termux-x11 || true
+mkdir -p "$S"
+
+echo "[x11-up] starting Termux:X11 on :1 (legacy drawing)…"
+TMPDIR="$T" termux-x11 :1 -legacy-drawing &
+echo "[x11-up] bringing Termux:X11 activity to foreground…"
+am start -n com.termux.x11/com.termux.x11.MainActivity || true
+
+# Wait up to 6s for the X1 *path* socket to appear
+echo "[x11-up] waiting for $S/X1 …"
+for i in $(seq 1 60); do
+  [ -S "$S/X1" ] && { echo "[x11-up] OK: X1 path socket present."; break; }
+  sleep 0.1
+done
+[ -S "$S/X1" ] || { echo "[x11-up] ERROR: X1 did not appear. Force-close Termux:X11 and rerun." >&2; exit 1; }
+
+# Some devices have a brief gap between socket creation and accepting clients.
+# Try xhost with matching TMPDIR a few times.
+echo "[x11-up] granting local access on :1 …"
+for i in $(seq 1 20); do
+  if TMPDIR="$T" DISPLAY=:1 xhost +LOCAL: >/dev/null 2>&1; then
+    TMPDIR="$T" DISPLAY=:1 xhost +SI:localuser:$(id -un) >/dev/null 2>&1 || true
+    echo "[x11-up] access granted."
+    break
+  fi
+  sleep 0.2
+  [ "$i" -eq 20 ] && { echo "[x11-up] WARNING: xhost could not open :1 yet, continuing anyway."; }
+done
+
+echo ":1" > "$S/.display"
+echo "[x11-up] current sockets:"
+ls -l "$S"
 SH
+chmod 0755 "$BIN/x11-up"
 
-# Base maintainer helpers so adduser & postinsts work
-cat <<'SH' | "$PREFIX/share/daijin/proot_start.sh" -r "$C" \
-  /usr/bin/env -i HOME=/root TERM=xterm-256color \
-  PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin \
-  /bin/sh
+# --- x11-down: stop X11 and clean socket dir ---
+cat >"$BIN/x11-down" <<'SH'
+#!/data/data/com.termux/files/usr/bin/sh
+set -e
+T="$PREFIX/tmp"; S="$T/.X11-unix"
+echo "[x11-down] stopping Termux:X11 …"
+am broadcast -a com.termux.x11.ACTION_STOP -p com.termux.x11 || true
+pkill termux-x11 || true
+echo "[x11-down] cleaning sockets …"
+mkdir -p "$S"
+SH
+chmod 0755 "$BIN/x11-down"
+
+# --- Minimal base in Ubuntu (proot) to keep postinsts quiet; idempotent ---
+echo "[setup] Preparing Ubuntu (proot) base packages …"
+cat <<'SH' | ubuntu-proot /bin/sh
 set -e
 export DEBIAN_FRONTEND=noninteractive
+export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+
+# Prevent noisy service autostarts in proot
+install -d /usr/sbin
+cat >/usr/sbin/policy-rc.d <<'EOF'
+#!/bin/sh
+exit 101
+EOF
+chmod +x /usr/sbin/policy-rc.d
+
 apt-get update -y
 apt-get install -y --no-install-recommends \
   debconf debconf-i18n init-system-helpers perl-base adduser dialog locales tzdata \
   sgml-base xml-core
-dpkg --configure -a || true
-apt-get -o Dpkg::Options::="--force-confnew" -f install
+
+# Desktop core (no-op if already present)
+apt-get install -y --no-install-recommends \
+  xfce4 xfce4-session xfce4-terminal \
+  dbus dbus-x11 xterm fonts-dejavu-core x11-utils psmisc
+
+# Locale + dbus prep (idempotent)
+sed -i 's/^# *en_US.UTF-8 UTF-8/en_US.UTF-8 UTF-8/' /etc/locale.gen || true
+locale-gen en_US.UTF-8
+dbus-uuidgen --ensure
+install -d -m 0755 /run/dbus
 SH
 
-# User + sudoers + remember + TERM
-cat <<SH | "$PREFIX/share/daijin/proot_start.sh" -r "$C" \
-  /usr/bin/env -i HOME=/root TERM=xterm-256color \
-  PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin \
-  /bin/sh
+# --- xfce4 start/stop wrappers (rootless/proot) ---
+cat >"$BIN/xfce4-proot-start" <<'SH'
+#!/data/data/com.termux/files/usr/bin/sh
 set -e
-U="$U"
-if [ -z "$U" ] || printf '%s' "$U" | grep -Eq '^-'; then
-  echo "Invalid username: $U"; exit 1
-fi
-if ! printf '%s' "$U" | grep -Eq '^[A-Za-z0-9_.@-]+$'; then
-  echo "Invalid username: $U"; exit 1
-fi
-/usr/sbin/adduser --disabled-password --gecos '' "$U" || true
-/usr/sbin/adduser "$U" sudo || true
-/usr/bin/install -d -m0755 /etc/sudoers.d
-echo "$U ALL=(ALL) NOPASSWD: ALL" > /etc/sudoers.d/99-$U
-/bin/chmod 0440 /etc/sudoers.d/99-$U
-/usr/bin/install -d -m0755 /etc/ruri
-printf '%s\n' "$U" > /etc/ruri/user
-/usr/bin/install -d -m0700 -o "$U" -g "$U" /home/"$U"/.run
-echo 'export TERM=xterm-256color' >> /root/.bashrc
-/bin/su - "$U" -c "echo 'export TERM=xterm-256color' >> ~/.bashrc"
+echo "[xfce4-proot-start] ensuring Termux:X11 :1 is up…"
+x11-up
+
+# Use the display chosen by x11-up (always :1 here)
+D=":1"
+F="$PREFIX/tmp/.X11-unix/.display"
+[ -s "$F" ] && D="$(head -n1 "$F")"
+echo "[xfce4-proot-start] using DISPLAY=$D"
+
+# Run the session *inside* Ubuntu
+cat <<EOF | ubuntu-proot /bin/sh
+set -e
+echo "[xfce4-proot-start] inside Ubuntu as \$(id -un):\$(id -gn)"
+echo "[xfce4-proot-start] DISPLAY=$D"
+
+# ===== Session-wide env SAFE for Termux:X11 + proot =====
+export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+export DISPLAY=$D
+export LANG=en_US.UTF-8
+export LC_ALL=en_US.UTF-8
+export GDK_BACKEND=x11
+export QT_QPA_PLATFORM=xcb
+export QT_XCB_NO_MITSHM=1
+export LIBGL_ALWAYS_SOFTWARE=1
+export GTK_USE_PORTAL=0
+export NO_AT_BRIDGE=1
+export ELECTRON_OZONE_PLATFORM_HINT=x11
+
+# Per-user runtime dir; don't touch /dev/shm in proot
+mkdir -p "\$HOME/.run" && chmod 700 "\$HOME/.run"
+export XDG_RUNTIME_DIR="\$HOME/.run"
+
+# ICE dir (owner won't be root in proot; warn is harmless)
+mkdir -p /tmp/.ICE-unix && chmod 1777 /tmp/.ICE-unix
+
+echo "[xfce4-proot-start] launching XFCE via dbus-run-session …"
+/usr/bin/which xfce4-session
+exec dbus-run-session -- bash -lc 'xfce4-session'
+EOF
 SH
+chmod 0755 "$BIN/xfce4-proot-start"
 
-# Wrappers
-TP="$PREFIX/tmp/.X11-unix"
-mkdir -p "$TP" "$PREFIX/bin"
-
-cat >"$PREFIX/bin/ubuntu-proot" <<'SH'
+cat >"$BIN/xfce4-proot-stop" <<'SH'
 #!/data/data/com.termux/files/usr/bin/sh
-# Wrapper for entering/running commands inside the ubuntu-proot container.
-: "${PREFIX:=/data/data/com.termux/files/usr}"
-C="/data/data/com.termux/files/home/containers/ubuntu-proot"
-TP="$PREFIX/tmp/.X11-unix"
-[ -d "$TP" ] || mkdir -p "$TP"
-
-# Default user is root until we record one
-U="root"
-[ -f "$C/etc/ruri/user" ] && U="$(cat "$C/etc/ruri/user")"
-
-PROOT="$PREFIX/share/daijin/proot_start.sh"
-BIND="-b $TP:/tmp/.X11-unix -b /sdcard:/mnt/sdcard -w /root"
-
-if [ "$#" -eq 0 ]; then
-  # Interactive login shell
-  exec "$PROOT" -r "$C" -e "$BIND" /bin/su - "$U"
-fi
-
-# If stdin is a pipe and caller asked for /bin/sh (or sh), preserve stdin
-if [ ! -t 0 ] && { [ "$1" = "/bin/sh" ] || [ "$1" = "sh" ] || [ "$1" = "-" ]; }; then
-  exec "$PROOT" -r "$C" -e "$BIND" /bin/su - "$U" -s /bin/sh
-fi
-
-# Otherwise run the provided command with args
-exec "$PROOT" -r "$C" -e "$BIND" /bin/su - "$U" -s /bin/sh -c 'exec "$@"' sh -- "$@"
+set +e
+echo "[xfce4-proot-stop] stopping XFCE in Ubuntu …"
+ubuntu-proot 'killall -q xfce4-session xfwm4 xfce4-panel xfdesktop xfsettingsd || true'
+echo "[xfce4-proot-stop] stopping proot and Termux:X11 …"
+ubuntu-proot-u || true
+x11-down || true
+echo "[xfce4-proot-stop] done."
 SH
-chmod 0755 "$PREFIX/bin/ubuntu-proot"
+chmod 0755 "$BIN/xfce4-proot-stop"
 
-cat >"$PREFIX/bin/ubuntu-proot-u" <<'SH'
-#!/data/data/com.termux/files/usr/bin/sh
-C="$HOME/containers/ubuntu-proot"
-pkill -f "proot .*${C}" || true
-SH
-chmod 0755 "$PREFIX/bin/ubuntu-proot-u"
-
-echo "✅ Rootless container ready. Enter with: ubuntu-proot"
+echo "✅ XFCE (proot) runtime ready."
+echo "   Start: xfce4-proot-start"
+echo "   Stop:  xfce4-proot-stop"

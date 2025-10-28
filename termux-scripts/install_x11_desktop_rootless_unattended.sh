@@ -37,8 +37,7 @@ for i in $(seq 1 60); do
 done
 [ -S "$S/X1" ] || { echo "[x11-up] ERROR: X1 did not appear. Force-close Termux:X11 and rerun." >&2; exit 1; }
 
-# Some devices have a brief gap between socket creation and accepting clients.
-# Try xhost with matching TMPDIR a few times.
+# Try xhost with matching TMPDIR a few times (server may not accept immediately)
 echo "[x11-up] granting local access on :1 …"
 for i in $(seq 1 20); do
   if TMPDIR="$T" DISPLAY=:1 xhost +LOCAL: >/dev/null 2>&1; then
@@ -131,11 +130,7 @@ export QT_XCB_NO_MITSHM=1
 export LIBGL_ALWAYS_SOFTWARE=1
 export GTK_USE_PORTAL=0
 export NO_AT_BRIDGE=1
-
-# Firefox stability in proot (propagates to apps launched from the menu)
-export MOZ_WEBRENDER=0
-export MOZ_DISABLE_CONTENT_SANDBOX=1
-export MOZ_ENABLE_WAYLAND=0
+export ELECTRON_OZONE_PLATFORM_HINT=x11
 
 # Per-user runtime dir; don't touch /dev/shm in proot
 mkdir -p "\$HOME/.run" && chmod 700 "\$HOME/.run"

@@ -41,7 +41,6 @@ if [ ! -S "$S/X1" ]; then
 fi
 
 echo "[x11-up] granting local access on :1 …"
-# IMPORTANT: run xhost with the same TMPDIR the server used
 for i in $(seq 1 20); do
   if TMPDIR="$T" DISPLAY=:1 xhost +LOCAL: >/dev/null 2>&1; then
     TMPDIR="$T" DISPLAY=:1 xhost +SI:localuser:$(id -un) >/dev/null 2>&1 || true
@@ -161,10 +160,6 @@ su - \"\$U\" -s /bin/bash -c '
   export LIBGL_ALWAYS_SOFTWARE=1
   export GTK_USE_PORTAL=0
   export NO_AT_BRIDGE=1
-  # Keep sandbox on in chroot by default; browsers run fine here.
-  export MOZ_ENABLE_WAYLAND=0
-  export MOZ_WEBRENDER=0
-  : \"\${MOZ_DISABLE_CONTENT_SANDBOX:=0}\"; export MOZ_DISABLE_CONTENT_SANDBOX
   export ELECTRON_OZONE_PLATFORM_HINT=x11
 
   mkdir -p \"\$HOME/.run\" && chmod 700 \"\$HOME/.run\"

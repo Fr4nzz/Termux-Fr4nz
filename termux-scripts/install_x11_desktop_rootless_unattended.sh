@@ -16,38 +16,43 @@ mkdir -p "$BIN" "$XSOCK"
 cat >"$BIN/x11-up" <<'SH'
 #!/data/data/com.termux/files/usr/bin/sh
 set -e
+T="$PREFIX/tmp"     # where Termux:X11 puts its socket
+S="$T/.X11-unix"
+
 echo "[x11-up] stopping any running Termux:X11 and cleaning sockets…"
 am broadcast -a com.termux.x11.ACTION_STOP -p com.termux.x11 || true
 pkill termux-x11 || true
-mkdir -p "$PREFIX/tmp/.X11-unix"
+mkdir -p "$S"
 
 echo "[x11-up] starting Termux:X11 on :1 (legacy drawing)…"
-TMPDIR="$PREFIX/tmp" termux-x11 :1 -legacy-drawing &
-X_PID=$!
+TMPDIR="$T" termux-x11 :1 -legacy-drawing &
 echo "[x11-up] bringing Termux:X11 activity to foreground…"
 am start -n com.termux.x11/com.termux.x11.MainActivity || true
 
-# Wait up to 6s for the X1 path socket to appear
-echo "[x11-up] waiting for $PREFIX/tmp/.X11-unix/X1 …"
+# Wait up to 6s for the X1 *path* socket to appear
+echo "[x11-up] waiting for $S/X1 …"
 for i in $(seq 1 60); do
-  if [ -S "$PREFIX/tmp/.X11-unix/X1" ]; then
-    echo "[x11-up] OK: X1 path socket present."
-    break
-  fi
+  [ -S "$S/X1" ] && { echo "[x11-up] OK: X1 path socket present."; break; }
   sleep 0.1
 done
-if [ ! -S "$PREFIX/tmp/.X11-unix/X1" ]; then
-  echo "[x11-up] ERROR: X1 did not appear. If the app was wedged, force-close 'Termux:X11' from Android Settings and rerun." >&2
-  exit 1
-fi
+[ -S "$S/X1" ] || { echo "[x11-up] ERROR: X1 did not appear. Force-close Termux:X11 and rerun." >&2; exit 1; }
 
+# Some devices have a brief gap between socket creation and accepting clients.
+# Try xhost with matching TMPDIR a few times.
 echo "[x11-up] granting local access on :1 …"
-DISPLAY=:1 xhost +LOCAL:
-DISPLAY=:1 xhost +SI:localuser:$(id -un) || true
+for i in $(seq 1 20); do
+  if TMPDIR="$T" DISPLAY=:1 xhost +LOCAL: >/dev/null 2>&1; then
+    TMPDIR="$T" DISPLAY=:1 xhost +SI:localuser:$(id -un) >/dev/null 2>&1 || true
+    echo "[x11-up] access granted."
+    break
+  fi
+  sleep 0.2
+  [ "$i" -eq 20 ] && { echo "[x11-up] WARNING: xhost could not open :1 yet, continuing anyway."; }
+done
 
-echo ":1" > "$PREFIX/tmp/.X11-unix/.display"
+echo ":1" > "$S/.display"
 echo "[x11-up] current sockets:"
-ls -l "$PREFIX/tmp/.X11-unix"
+ls -l "$S"
 SH
 chmod 0755 "$BIN/x11-up"
 
@@ -55,11 +60,12 @@ chmod 0755 "$BIN/x11-up"
 cat >"$BIN/x11-down" <<'SH'
 #!/data/data/com.termux/files/usr/bin/sh
 set -e
+T="$PREFIX/tmp"; S="$T/.X11-unix"
 echo "[x11-down] stopping Termux:X11 …"
 am broadcast -a com.termux.x11.ACTION_STOP -p com.termux.x11 || true
 pkill termux-x11 || true
 echo "[x11-down] cleaning sockets …"
-mkdir -p "$PREFIX/tmp/.X11-unix"
+mkdir -p "$S"
 SH
 chmod 0755 "$BIN/x11-down"
 
@@ -82,9 +88,6 @@ apt-get update -y
 apt-get install -y --no-install-recommends \
   debconf debconf-i18n init-system-helpers perl-base adduser dialog locales tzdata \
   sgml-base xml-core
-
-dpkg --configure -a || true
-apt-get -o Dpkg::Options::="--force-confnew" -f install
 
 # Desktop core (no-op if already present)
 apt-get install -y --no-install-recommends \

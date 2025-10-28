@@ -2,55 +2,79 @@
 set -euo pipefail
 export DEBIAN_FRONTEND=noninteractive
 
-# --- repo & key (handle prior conflicting Signed-By paths) ---
-sudo install -d -m0755 /etc/apt/keyrings
-curl -fsSL https://packages.microsoft.com/keys/microsoft.asc \
-  | sudo gpg --dearmor -o /etc/apt/keyrings/packages.microsoft.gpg
+# --- 0) Make sure already-unpacked deps are configured (if prior apt run failed mid-way)
+sudo dpkg --configure -a || true
+sudo apt-get -f install -y || true
 
-ARCH="$(dpkg --print-architecture)"
-LIST="/etc/apt/sources.list.d/vscode.list"
-LINE="deb [arch=${ARCH} signed-by=/etc/apt/keyrings/packages.microsoft.gpg] https://packages.microsoft.com/repos/code stable main"
-
-if [ -f "$LIST" ]; then
-  # normalize any old entries to the new Signed-By path
-  sudo sed -i 's#https://packages.microsoft.com/repos/code.*#stable main#g' "$LIST" || true
-  echo "$LINE" | sudo tee "$LIST" >/dev/null
-else
-  echo "$LINE" | sudo tee "$LIST" >/dev/null
+# --- 1) Figure out the right VS Code tarball (default: linux-arm64)
+arch="${1:-}"
+if [ -z "$arch" ]; then
+  case "$(dpkg --print-architecture 2>/dev/null || echo "$(uname -m)")" in
+    arm64|aarch64) arch="linux-arm64" ;;
+    amd64|x86_64)  arch="linux-x64"   ;;  # just in case someone reuses this on x64
+    *)             arch="linux-arm64" ;;
+  esac
 fi
 
-sudo apt-get update
-sudo apt-get install -y code
+VSCODE_TARBALL_URL="https://code.visualstudio.com/sha/download?build=stable&os=${arch}"
 
-# --- proot-friendly launcher (no setuid sandbox, no /dev/shm) ---
+# --- 2) Download & install to /opt/vscode
+tmp_tgz="$(mktemp --suffix=.tar.gz)"
+echo "[*] Downloading VS Code (${arch})…"
+curl -L "$VSCODE_TARBALL_URL" -o "$tmp_tgz"
+
+echo "[*] Installing to /opt/vscode…"
+sudo rm -rf /opt/vscode
+sudo install -d -m 0755 /opt/vscode
+sudo tar -xzf "$tmp_tgz" -C /opt/vscode --strip-components=1
+rm -f "$tmp_tgz"
+
+# --- 3) Proot-/chroot-friendly launcher
+sudo install -d -m 0755 /usr/local/bin
 sudo tee /usr/local/bin/code-proot >/dev/null <<'SH'
 #!/bin/sh
 set -e
+# Helpful guard when launched outside X11
+if [ -z "${DISPLAY:-}" ]; then
+  echo "DISPLAY is not set. Start Termux:X11 (x11-up) and your desktop (xfce4-proot-start), or set DISPLAY=:1."
+  exit 1
+fi
+# Electron/X11 + proot-friendly env
 export ELECTRON_OZONE_PLATFORM_HINT=x11
 export QT_QPA_PLATFORM=xcb
 export LIBGL_ALWAYS_SOFTWARE=1
+# Per-user runtime dir (avoid /dev/shm under proot)
 [ -d "$HOME/.run" ] || mkdir -p "$HOME/.run"
+chmod 700 "$HOME/.run" 2>/dev/null || true
 export XDG_RUNTIME_DIR="$HOME/.run"
-exec /usr/share/code/code \
+
+exec /opt/vscode/bin/code \
   --no-sandbox --disable-setuid-sandbox --disable-dev-shm-usage \
   --password-store=basic "$@"
 SH
 sudo chmod +x /usr/local/bin/code-proot
 
+# --- 4) Desktop entry
+sudo install -d -m 0755 /usr/share/applications
 sudo tee /usr/share/applications/code-proot.desktop >/dev/null <<'SH'
 [Desktop Entry]
 Name=Visual Studio Code (proot)
-Comment=VS Code with proot-safe flags
+Comment=VS Code (tarball) with proot-safe flags
 Exec=/usr/local/bin/code-proot %U
-Icon=code
+Icon=/opt/vscode/resources/app/resources/linux/code.png
 Type=Application
 Categories=Development;IDE;
 Terminal=false
 StartupNotify=true
 SH
 
-# Desktop icon if desktopify is present
-command -v desktopify >/dev/null 2>&1 || bash -lc 'curl -fsSL https://raw.githubusercontent.com/Fr4nzz/Termux-Fr4nz/refs/heads/main/container-scripts/install_desktopify.sh | bash'
+# --- 5) Ensure desktopify exists, then drop a desktop shortcut
+if ! command -v desktopify >/dev/null 2>&1; then
+  echo "[*] Installing desktopify helper…"
+  curl -fsSL https://raw.githubusercontent.com/Fr4nzz/Termux-Fr4nz/refs/heads/main/container-scripts/install_desktopify.sh | bash
+fi
 desktopify code-proot || true
 
-echo "VS Code installed."
+echo
+echo "✅ VS Code installed."
+echo "Run it with: code-proot"

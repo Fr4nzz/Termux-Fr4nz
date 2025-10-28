@@ -13,6 +13,12 @@ fi
 pkg update -y >/dev/null || true
 pkg install -y tsu >/dev/null
 
+# Ensure rurima is present (rooted uses rurima, but daijin is not needed here)
+if ! command -v rurima >/dev/null 2>&1; then
+  echo "[rooted] Installing rurima (required for pull)..."
+  curl -fsSL https://raw.githubusercontent.com/Fr4nzz/Termux-Fr4nz/refs/heads/main/termux-scripts/install_rurima.sh | bash
+fi
+
 # Pull if missing (requires rurima)
 [ -d "$C" ] || rurima lxc pull -o ubuntu -v noble -s "$C"
 

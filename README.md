@@ -23,7 +23,8 @@ This makes Termux predict commands and look nicer.
 curl -fsSL https://raw.githubusercontent.com/Fr4nzz/Termux-Fr4nz/refs/heads/main/termux-scripts/install_zsh.sh | bash
 ```
 
-## Install rurima (bundled ruri)
+## Install rurima (skippable)
+It is also installed during setup containers because the rootless container installs daijin which for some reason breaks rurima so we have to (re)install rurima after daijin.
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/Fr4nzz/Termux-Fr4nz/refs/heads/main/termux-scripts/install_rurima.sh | bash
@@ -32,7 +33,7 @@ curl -fsSL https://raw.githubusercontent.com/Fr4nzz/Termux-Fr4nz/refs/heads/main
 ## Quick start (UNATTENDED)
 
 > Run these in **Termux**. Default desktop user is `legend`.  
-> To change it: `export DESKTOP_USER=<name>` before running.
+> You can also set user before by setting: `export DESKTOP_USER=<name>` before running.
 
 **A) Containers**
 - Rooted container:  

@@ -12,7 +12,7 @@ fi
 
 pkg update -y >/dev/null || true
 
-# Install Daijin (proot runner) if missing
+# --- Install Daijin first (its install can break rurima binaries) ---
 if [ ! -x "$PREFIX/share/daijin/proot_start.sh" ]; then
   tmpdeb="$PREFIX/tmp/daijin-aarch64.deb"
   mkdir -p "$PREFIX/tmp"
@@ -20,6 +20,17 @@ if [ ! -x "$PREFIX/share/daijin/proot_start.sh" ]; then
     https://github.com/RuriOSS/daijin/releases/download/daijin-v1.5-rc1/daijin-aarch64.deb
   (apt install -y "$tmpdeb" 2>/dev/null) || (dpkg -i "$tmpdeb" || true; apt -f install -y)
   rm -f "$tmpdeb"
+fi
+
+# --- (Re)install rurima AFTER daijin to avoid "unexpected e_type: 2" ---
+if ! command -v rurima >/dev/null 2>&1; then
+  echo "[rootless] Installing rurima..."
+  curl -fsSL https://raw.githubusercontent.com/Fr4nzz/Termux-Fr4nz/refs/heads/main/termux-scripts/install_rurima.sh | bash
+else
+  if ! rurima -v >/dev/null 2>&1; then
+    echo "[rootless] Repairing rurima (post-daijin)..."
+    curl -fsSL https://raw.githubusercontent.com/Fr4nzz/Termux-Fr4nz/refs/heads/main/termux-scripts/install_rurima.sh | bash
+  fi
 fi
 
 # Pull Ubuntu (requires rurima)

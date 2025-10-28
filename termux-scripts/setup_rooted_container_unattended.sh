@@ -20,6 +20,7 @@ if ! command -v rurima >/dev/null 2>&1; then
 fi
 
 # Pull if missing (requires rurima)
+mkdir -p "$C"
 [ -d "$C" ] || sudo rurima lxc pull -o ubuntu -v noble -s "$C"
 
 # Fixup from daijin repo

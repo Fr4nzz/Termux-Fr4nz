@@ -48,26 +48,29 @@ sudo rurima r "$C" /bin/bash -lc '
 '
 
 # User + sudoers + remember + XDG runtime
-sudo env DESKTOP_USER="$U" rurima r "$C" /bin/bash -lc '
+sudo rurima r "$C" /bin/bash -lc "
   set -e
-  U="$DESKTOP_USER"
-  if [ -z "$U" ] || printf "%s" "$U" | grep -Eq "^-"; then
-    echo "Invalid username: $U"; exit 1
-  fi
-  if ! printf "%s" "$U" | grep -Eq "^[A-Za-z0-9_.@-]+$"; then
-    echo "Invalid username: $U"; exit 1
-  fi
-  /usr/sbin/adduser --disabled-password --gecos "" "$U" || true
-  /usr/sbin/adduser "$U" sudo || true
+
+  # create the user inside the container
+  /usr/sbin/adduser --disabled-password --gecos '' '$U' || true
+  /usr/sbin/adduser '$U' sudo || true
+
+  # passwordless sudo for that user
   /usr/bin/install -d -m0755 /etc/sudoers.d
-  echo "$U ALL=(ALL) NOPASSWD: ALL" > /etc/sudoers.d/99-$U
+  echo '$U ALL=(ALL) NOPASSWD: ALL' > /etc/sudoers.d/99-$U
   /bin/chmod 0440 /etc/sudoers.d/99-$U
+
+  # remember the chosen desktop user
   /usr/bin/install -d -m0755 /etc/ruri
-  printf "%s\n" "$U" > /etc/ruri/user
-  /usr/bin/install -d -m0700 -o "$U" -g "$U" /home/"$U"/.run
-  echo "export TERM=xterm-256color" >> /root/.bashrc
-  /bin/su - "$U" -c "echo 'export TERM=xterm-256color' >> ~/.bashrc"
-'
+  printf '%s\n' '$U' > /etc/ruri/user
+
+  # per-user runtime dir for XDG_RUNTIME_DIR, Termux:X11, etc
+  /usr/bin/install -d -m0700 -o '$U' -g '$U' /home/'$U'/.run
+
+  # set TERM defaults for root and that user
+  echo 'export TERM=xterm-256color' >> /root/.bashrc
+  /bin/su - '$U' -c \"echo 'export TERM=xterm-256color' >> ~/.bashrc\"
+"
 
 # Termux → chroot wrappers
 TP="$PREFIX/tmp/.X11-unix"

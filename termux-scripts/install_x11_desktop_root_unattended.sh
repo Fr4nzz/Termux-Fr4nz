@@ -16,34 +16,45 @@ mkdir -p "$BIN" "$XSOCK"
 cat >"$BIN/x11-up" <<'SH'
 #!/data/data/com.termux/files/usr/bin/sh
 set -e
+T="$PREFIX/tmp"              # Termux:X11 places its socket here
+S="$T/.X11-unix"
+
 echo "[x11-up] stopping any running Termux:X11 and cleaning sockets…"
 am broadcast -a com.termux.x11.ACTION_STOP -p com.termux.x11 || true
 pkill termux-x11 || true
-mkdir -p "$PREFIX/tmp/.X11-unix"
+mkdir -p "$S"
 
 echo "[x11-up] starting Termux:X11 on :1 (legacy drawing)…"
-TMPDIR="$PREFIX/tmp" termux-x11 :1 -legacy-drawing &
+TMPDIR="$T" termux-x11 :1 -legacy-drawing &
 echo "[x11-up] bringing Termux:X11 activity to foreground…"
 am start -n com.termux.x11/com.termux.x11.MainActivity || true
 
 # Wait up to 6s for X1 to appear
-echo "[x11-up] waiting for $PREFIX/tmp/.X11-unix/X1 …"
+echo "[x11-up] waiting for $S/X1 …"
 for i in $(seq 1 60); do
-  [ -S "$PREFIX/tmp/.X11-unix/X1" ] && { echo "[x11-up] OK: X1 path socket present."; break; }
+  [ -S "$S/X1" ] && { echo "[x11-up] OK: X1 path socket present."; break; }
   sleep 0.1
 done
-if [ ! -S "$PREFIX/tmp/.X11-unix/X1" ]; then
+if [ ! -S "$S/X1" ]; then
   echo "[x11-up] ERROR: X1 did not appear. Force-close Termux:X11 in Android settings and rerun." >&2
   exit 1
 fi
 
 echo "[x11-up] granting local access on :1 …"
-DISPLAY=:1 xhost +LOCAL:
-DISPLAY=:1 xhost +SI:localuser:$(id -un) || true
+# IMPORTANT: run xhost with the same TMPDIR the server used
+for i in $(seq 1 20); do
+  if TMPDIR="$T" DISPLAY=:1 xhost +LOCAL: >/dev/null 2>&1; then
+    TMPDIR="$T" DISPLAY=:1 xhost +SI:localuser:$(id -un) >/dev/null 2>&1 || true
+    echo "[x11-up] access granted."
+    break
+  fi
+  sleep 0.2
+  [ "$i" -eq 20 ] && echo "[x11-up] WARNING: xhost could not open :1 yet, continuing anyway."
+done
 
-echo ":1" > "$PREFIX/tmp/.X11-unix/.display"
+echo ":1" > "$S/.display"
 echo "[x11-up] current sockets:"
-ls -l "$PREFIX/tmp/.X11-unix"
+ls -l "$S"
 SH
 chmod 0755 "$BIN/x11-up"
 
@@ -51,11 +62,12 @@ chmod 0755 "$BIN/x11-up"
 cat >"$BIN/x11-down" <<'SH'
 #!/data/data/com.termux/files/usr/bin/sh
 set -e
+T="$PREFIX/tmp"; S="$T/.X11-unix"
 echo "[x11-down] stopping Termux:X11 …"
 am broadcast -a com.termux.x11.ACTION_STOP -p com.termux.x11 || true
 pkill termux-x11 || true
 echo "[x11-down] cleaning sockets …"
-mkdir -p "$PREFIX/tmp/.X11-unix"
+mkdir -p "$S"
 SH
 chmod 0755 "$BIN/x11-down"
 
@@ -140,7 +152,7 @@ su - \"\$U\" -s /bin/bash -c '
   set -e
   echo \"[xfce4-chroot-start] user is \$(id -un):\$(id -gn)\"
   # ===== Session env (propagates to apps launched from the menu) =====
-  export DISPLAY=\"'$D'\"
+  export DISPLAY=\"'$D'\" 
   export LANG=en_US.UTF-8
   export LC_ALL=en_US.UTF-8
   export GDK_BACKEND=x11
@@ -149,8 +161,7 @@ su - \"\$U\" -s /bin/bash -c '
   export LIBGL_ALWAYS_SOFTWARE=1
   export GTK_USE_PORTAL=0
   export NO_AT_BRIDGE=1
-
-  # Browser/Electron sanity: X11 only, SW rendering; sandbox stays ON by default.
+  # Keep sandbox on in chroot by default; browsers run fine here.
   export MOZ_ENABLE_WAYLAND=0
   export MOZ_WEBRENDER=0
   : \"\${MOZ_DISABLE_CONTENT_SANDBOX:=0}\"; export MOZ_DISABLE_CONTENT_SANDBOX

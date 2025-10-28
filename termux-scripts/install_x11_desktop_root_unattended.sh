@@ -33,7 +33,7 @@ for i in $(seq 1 60); do
   sleep 0.1
 done
 if [ ! -S "$PREFIX/tmp/.X11-unix/X1" ]; then
-  echo "[x11-up] ERROR: X1 did not appear. If the app was wedged, force-close 'Termux:X11' from Android Settings and rerun." >&2
+  echo "[x11-up] ERROR: X1 did not appear. Force-close Termux:X11 in Android settings and rerun." >&2
   exit 1
 fi
 
@@ -126,8 +126,7 @@ if [ ! -s /etc/ruri/user ]; then
 fi
 U=\"\$(cat /etc/ruri/user)\"
 if [ \"\$U\" = 'root' ]; then
-  echo '[xfce4-chroot-start] ERROR: Desktop user is set to root; this launcher runs only as a non-root user.' >&2
-  echo '  Edit /etc/ruri/user to a non-root account (e.g. ubuntu) and try again.' >&2
+  echo '[xfce4-chroot-start] ERROR: Desktop user is root; set a non-root user in /etc/ruri/user.' >&2
   exit 1
 fi
 if ! id \"\$U\" >/dev/null 2>&1; then
@@ -140,7 +139,7 @@ echo '[xfce4-chroot-start] starting XFCE as non-root user…'
 su - \"\$U\" -s /bin/bash -c '
   set -e
   echo \"[xfce4-chroot-start] user is \$(id -un):\$(id -gn)\"
-  # Session env (set INSIDE su so they survive)
+  # ===== Session env (propagates to apps launched from the menu) =====
   export DISPLAY=\"'$D'\"
   export LANG=en_US.UTF-8
   export LC_ALL=en_US.UTF-8
@@ -150,6 +149,13 @@ su - \"\$U\" -s /bin/bash -c '
   export LIBGL_ALWAYS_SOFTWARE=1
   export GTK_USE_PORTAL=0
   export NO_AT_BRIDGE=1
+
+  # Browser/Electron sanity: X11 only, SW rendering; sandbox stays ON by default.
+  export MOZ_ENABLE_WAYLAND=0
+  export MOZ_WEBRENDER=0
+  : \"\${MOZ_DISABLE_CONTENT_SANDBOX:=0}\"; export MOZ_DISABLE_CONTENT_SANDBOX
+  export ELECTRON_OZONE_PLATFORM_HINT=x11
+
   mkdir -p \"\$HOME/.run\" && chmod 700 \"\$HOME/.run\"
   export XDG_RUNTIME_DIR=\"\$HOME/.run\"
   command -v xfce4-session

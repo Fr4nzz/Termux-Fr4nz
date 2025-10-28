@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
-if [[ $EUID -ne 0 ]]; then exec sudo -E bash "$0" "$@"; fi
-cat >/usr/local/bin/desktopify <<'SH'
+
+sudo tee /usr/local/bin/desktopify >/dev/null <<'SH'
 #!/bin/sh
 set -eu
 RU="$(cat /etc/ruri/user 2>/dev/null || echo ubuntu)"
@@ -15,5 +15,6 @@ for name in "$@"; do
   chown "$RU:$RU" "$desk/$name.desktop"
 done
 SH
-chmod 0755 /usr/local/bin/desktopify
+sudo chmod 0755 /usr/local/bin/desktopify
+
 echo "desktopify installed."

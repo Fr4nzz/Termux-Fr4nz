@@ -54,45 +54,58 @@ curl -fsSL https://raw.githubusercontent.com/Fr4nzz/Termux-Fr4nz/refs/heads/main
   curl -fsSL https://raw.githubusercontent.com/Fr4nzz/Termux-Fr4nz/refs/heads/main/termux-scripts/install_x11_desktop_rootless_unattended.sh | bash
   ```
 
-**C) R / RStudio / Apps**
-- Install R binaries:  
-  ```bash
-  curl -fsSL https://raw.githubusercontent.com/Fr4nzz/Termux-Fr4nz/refs/heads/main/termux-scripts/install_r_binaries_unattended.sh | bash
-  ```
-- RStudio Server (installs server + Termux wrappers; installs R first if missing):  
-  - Rootless (proot + Daijin):
-    ```bash
-    curl -fsSL https://raw.githubusercontent.com/Fr4nzz/Termux-Fr4nz/refs/heads/main/termux-scripts/install_rstudio_server_proot_unattended.sh | bash
-    ```
-  - Rooted (rurima/ruri chroot):
-    ```bash
-    curl -fsSL https://raw.githubusercontent.com/Fr4nzz/Termux-Fr4nz/refs/heads/main/termux-scripts/install_rstudio_server_chroot_unattended.sh | bash
-    ```
-- App manager (Synaptic + enable universe/multiverse):  
-  ```bash
-  curl -fsSL https://raw.githubusercontent.com/Fr4nzz/Termux-Fr4nz/refs/heads/main/termux-scripts/install_app_manager_unattended.sh | bash
-  ```
-- Desktopify helper:  
-  ```bash
-  curl -fsSL https://raw.githubusercontent.com/Fr4nzz/Termux-Fr4nz/refs/heads/main/termux-scripts/install_desktopify_unattended.sh | bash
-  ```
-- Firefox (adds Desktop icon):  
-  ```bash
-  curl -fsSL https://raw.githubusercontent.com/Fr4nzz/Termux-Fr4nz/refs/heads/main/termux-scripts/install_firefox_unattended.sh | bash
-  ```
-- VS Code (adds Desktop icon):  
-  ```bash
-  curl -fsSL https://raw.githubusercontent.com/Fr4nzz/Termux-Fr4nz/refs/heads/main/termux-scripts/install_vscode_unattended.sh | bash
-  ```
-- RStudio Desktop (installs R if missing; adds Desktop icon):  
-  ```bash
-  curl -fsSL https://raw.githubusercontent.com/Fr4nzz/Termux-Fr4nz/refs/heads/main/termux-scripts/install_rstudio_desktop_unattended.sh | bash
-  ```
+### Desktop Apps
+
+**Enter your container** first:
+
+```bash
+# choose one:
+ubuntu-proot        # rootless (proot+daijin)
+ubuntu-chroot       # rooted
+```
+
+Then run inside the **container** the installer you want:
+
+**Firefox**
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/Fr4nzz/Termux-Fr4nz/refs/heads/main/container-scripts/install_firefox.sh | bash
+```
+
+**VS Code**
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/Fr4nzz/Termux-Fr4nz/refs/heads/main/container-scripts/install_vscode.sh | bash
+```
+
+**App manager (Synaptic + universe/multiverse)**
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/Fr4nzz/Termux-Fr4nz/refs/heads/main/container-scripts/install_app_manager.sh | bash
+```
+
+**Desktopify helper (adds desktop icons)**
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/Fr4nzz/Termux-Fr4nz/refs/heads/main/container-scripts/install_desktopify.sh | bash
+```
+
+**R (CRAN + r2u where available) and bspm**
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/Fr4nzz/Termux-Fr4nz/refs/heads/main/container-scripts/install_r_binaries.sh | bash
+```
+
+**RStudio Desktop (installs R first if missing)**
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/Fr4nzz/Termux-Fr4nz/refs/heads/main/container-scripts/install_rstudio_desktop.sh | bash
+```
 
 ### Where to run which scripts
 
-- `termux-scripts/` → run from **Termux**. These thin wrappers enter the Ubuntu container and call the real installers.
-- `container-scripts/` → run **inside** the Ubuntu container (manually or via the wrappers above).
+- `termux-scripts/` → **Termux-side bootstrap only** (containers + X11 wrappers).
+- `container-scripts/` → **Run these inside Ubuntu** (via `ubuntu-proot` or `ubuntu-chroot`).
 
 > During container setup you’ll be prompted for a desktop username (`legend` by default).  
 > To skip the prompt, set an env var first: `export DESKTOP_USER=<name>`.

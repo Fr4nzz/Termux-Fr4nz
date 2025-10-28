@@ -80,26 +80,22 @@ mkdir -p "$TP" "$PREFIX/bin"
 cat >"$PREFIX/bin/ubuntu-chroot" <<'SH'
 #!/data/data/com.termux/files/usr/bin/sh
 PREFIX="${PREFIX:-/data/data/com.termux/files/usr}"
-C="$HOME/containers/ubuntu-chroot"
+C="${CONTAINER:-$HOME/containers/ubuntu-chroot}"
 TP="$PREFIX/tmp/.X11-unix"
 [ -d "$TP" ] || mkdir -p "$TP"
 
-[ -f "$C/etc/ruri/user" ] && U="$(cat "$C/etc/ruri/user")"
-
+# If you passed args, run that command as root in the container.
+# If not, start an interactive login shell as root.
 if [ "$#" -gt 0 ]; then
-  # Non-interactive: run a command AS that user
-  # Strategy:
-  #   sudo rurima r ... "$C" /bin/su - "$U" -c "<your command>"
   exec sudo rurima r \
     -m "$TP" /tmp/.X11-unix \
     -m /sdcard /mnt/sdcard \
-    "$C" /bin/su - "$U" -c "$*"
+    "$C" /bin/bash -lc "$*"
 else
-  # Interactive login shell as $U
   exec sudo rurima r \
     -m "$TP" /tmp/.X11-unix \
     -m /sdcard /mnt/sdcard \
-    "$C" /bin/su - "$U"
+    "$C" /bin/bash -l
 fi
 SH
 chmod 0755 "$PREFIX/bin/ubuntu-chroot"

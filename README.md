@@ -111,9 +111,17 @@ curl -fsSL https://raw.githubusercontent.com/Fr4nzz/Termux-Fr4nz/refs/heads/main
 > To skip the prompt, set an env var first: `export DESKTOP_USER=<name>`.
 
 > The setup scripts also install base tools (`curl`, `ca-certificates`, `gnupg`, `wget`) inside Ubuntu so every `container-scripts/*` helper works immediately.
+
+## Repair apt
+
+Run this
+```bash
+curl -fsSL https://raw.githubusercontent.com/Fr4nzz/Termux-Fr4nz/refs/heads/main/container-scripts/apt_heal.sh | bash
 ```
 
-## Usage (common steps)
+```
+
+## Access internal storage
 
 Run `termux-setup-storage` once in Termux so the app can mount internal storage.  
 This grants access to `/sdcard`, letting the container see your phone's files when you bind it.
@@ -153,7 +161,9 @@ From Termux:
 ```bash
 # Hold a wakelock while your job runs
 termux-wake-lock
+```
 
+```bash
 # Release when you’re done
 termux-wake-unlock
 ```

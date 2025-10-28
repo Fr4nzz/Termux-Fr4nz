@@ -63,7 +63,7 @@ mkdir -p "$PREFIX/tmp/.X11-unix"
 SH
 chmod 0755 "$BIN/x11-down"
 
-# --- Minimal base in Ubuntu (proot) to keep postinsts quiet; you already have most bits ---
+# --- Minimal base in Ubuntu (proot) to keep postinsts quiet; idempotent ---
 echo "[setup] Preparing Ubuntu (proot) base packages …"
 cat <<'SH' | ubuntu-proot /bin/sh
 set -e
@@ -86,7 +86,7 @@ apt-get install -y --no-install-recommends \
 dpkg --configure -a || true
 apt-get -o Dpkg::Options::="--force-confnew" -f install
 
-# Desktop core (if already present, this is a no-op)
+# Desktop core (no-op if already present)
 apt-get install -y --no-install-recommends \
   xfce4 xfce4-session xfce4-terminal \
   dbus dbus-x11 xterm fonts-dejavu-core x11-utils psmisc
@@ -105,19 +105,19 @@ set -e
 echo "[xfce4-proot-start] ensuring Termux:X11 :1 is up…"
 x11-up
 
-# Use the display chosen by x11-up (always :1 in this script)
+# Use the display chosen by x11-up (always :1 here)
 D=":1"
 F="$PREFIX/tmp/.X11-unix/.display"
 [ -s "$F" ] && D="$(head -n1 "$F")"
 echo "[xfce4-proot-start] using DISPLAY=$D"
 
-# Run the session *inside* Ubuntu via a here-doc (works reliably with your wrapper)
+# Run the session *inside* Ubuntu
 cat <<EOF | ubuntu-proot /bin/sh
 set -e
 echo "[xfce4-proot-start] inside Ubuntu as \$(id -un):\$(id -gn)"
 echo "[xfce4-proot-start] DISPLAY=$D"
 
-# Runtime env (session-scoped)
+# ===== Session-wide env SAFE for Termux:X11 + proot =====
 export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 export DISPLAY=$D
 export LANG=en_US.UTF-8
@@ -129,13 +129,20 @@ export LIBGL_ALWAYS_SOFTWARE=1
 export GTK_USE_PORTAL=0
 export NO_AT_BRIDGE=1
 
-# Ensure ICE dir & a private XDG_RUNTIME_DIR (don’t touch /dev/shm in proot)
-mkdir -p /tmp/.ICE-unix && chmod 1777 /tmp/.ICE-unix
+# Firefox stability in proot (propagates to apps launched from the menu)
+export MOZ_WEBRENDER=0
+export MOZ_DISABLE_CONTENT_SANDBOX=1
+export MOZ_ENABLE_WAYLAND=0
+
+# Per-user runtime dir; don't touch /dev/shm in proot
 mkdir -p "\$HOME/.run" && chmod 700 "\$HOME/.run"
 export XDG_RUNTIME_DIR="\$HOME/.run"
 
+# ICE dir (owner won't be root in proot; warn is harmless)
+mkdir -p /tmp/.ICE-unix && chmod 1777 /tmp/.ICE-unix
+
 echo "[xfce4-proot-start] launching XFCE via dbus-run-session …"
-command -v xfce4-session
+/usr/bin/which xfce4-session
 exec dbus-run-session -- bash -lc 'xfce4-session'
 EOF
 SH

@@ -70,7 +70,7 @@ chmod 0755 "$BIN/x11-down"
 
 # --- Minimal base in Ubuntu (proot) to keep postinsts quiet; idempotent ---
 echo "[setup] Preparing Ubuntu (proot) base packages …"
-cat <<'SH' | ubuntu-proot /bin/sh
+cat <<'SH' | ubuntu-proot /bin/su - root -s /bin/sh
 set -e
 export DEBIAN_FRONTEND=noninteractive
 export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin

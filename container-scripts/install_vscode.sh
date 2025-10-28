@@ -16,7 +16,30 @@ echo "deb [arch=${ARCH} signed-by=/etc/apt/keyrings/packages.microsoft.gpg] http
 sudo apt-get update
 sudo apt-get install -y code
 
+# proot-friendly launcher (no setuid sandbox)
+sudo tee /usr/local/bin/code-proot >/dev/null <<'SH'
+#!/bin/sh
+export ELECTRON_OZONE_PLATFORM_HINT=x11
+export QT_QPA_PLATFORM=xcb
+export LIBGL_ALWAYS_SOFTWARE=1
+exec /usr/share/code/code --no-sandbox --password-store=basic "$@"
+SH
+sudo chmod +x /usr/local/bin/code-proot
+
+# Desktop entry for the wrapper
+sudo tee /usr/share/applications/code-proot.desktop >/dev/null <<'SH'
+[Desktop Entry]
+Name=Visual Studio Code (proot)
+Comment=VS Code with proot-safe flags
+Exec=/usr/local/bin/code-proot %U
+Icon=code
+Type=Application
+Categories=Development;IDE;
+Terminal=false
+StartupNotify=true
+SH
+
 command -v desktopify >/dev/null 2>&1 || bash -lc 'curl -fsSL https://raw.githubusercontent.com/Fr4nzz/Termux-Fr4nz/refs/heads/main/container-scripts/install_desktopify.sh | bash'
-desktopify code || true
+desktopify code-proot || true
 
 echo "VS Code installed."

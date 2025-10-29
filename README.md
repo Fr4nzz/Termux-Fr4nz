@@ -139,7 +139,7 @@ curl -fsSL https://raw.githubusercontent.com/Fr4nzz/Termux-Fr4nz/refs/heads/main
 ```
 vscode-server-proot-start
 # open in mobile browser:
-#   http://127.0.0.1:13338
+   http://127.0.0.1:13338
 # stop when done:
 vscode-server-proot-stop
 
@@ -149,7 +149,7 @@ vscode-server-proot-stop
 curl -fsSL https://raw.githubusercontent.com/Fr4nzz/Termux-Fr4nz/refs/heads/main/termux-scripts/install_vscode_server_chroot_unattended.sh | bash
 ```
 vscode-server-chroot-start
-# http://127.0.0.1:13338
+ http://127.0.0.1:13338
 vscode-server-chroot-stop
 
 ### VSCodium Server (`openvscode-server`)
@@ -161,7 +161,7 @@ vscode-server-chroot-stop
 ```bash
 curl -fsSL https://raw.githubusercontent.com/Fr4nzz/Termux-Fr4nz/refs/heads/main/termux-scripts/install_vscodium_server_proot_unattended.sh | bash
 vscodium-server-proot-start
-# http://127.0.0.1:13337
+ http://127.0.0.1:13337
 vscodium-server-proot-stop
 ```
 
@@ -170,7 +170,7 @@ vscodium-server-proot-stop
 ```bash
 curl -fsSL https://raw.githubusercontent.com/Fr4nzz/Termux-Fr4nz/refs/heads/main/termux-scripts/install_vscodium_server_chroot_unattended.sh | bash
 vscodium-server-chroot-start
-# http://127.0.0.1:13337
+ http://127.0.0.1:13337
 vscodium-server-chroot-stop
 ```
 

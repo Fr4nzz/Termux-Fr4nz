@@ -29,28 +29,41 @@ sudo install -d -m 0755 /opt/vscode
 sudo tar -xzf "$tmp_tgz" -C /opt/vscode --strip-components=1
 rm -f "$tmp_tgz"
 
-# --- 3) Proot-/chroot-friendly launcher
+# --- 3) Proot-/chroot-friendly launcher (root-safe, Termux:X11-safe)
 sudo install -d -m 0755 /usr/local/bin
 sudo tee /usr/local/bin/code-proot >/dev/null <<'SH'
 #!/bin/sh
 set -e
+
 # Helpful guard when launched outside X11
 if [ -z "${DISPLAY:-}" ]; then
-  echo "DISPLAY is not set. Start Termux:X11 (x11-up) and your desktop (xfce4-proot-start), or set DISPLAY=:1."
+  echo "DISPLAY is not set. Start Termux:X11 (x11-up) and your desktop (xfce4-proot-start / xfce4-chroot-start), or set DISPLAY=:1."
   exit 1
 fi
-# Electron/X11 + proot-friendly env
+
+# Electron/X11 + proot-/chroot-friendly env
 export ELECTRON_OZONE_PLATFORM_HINT=x11
 export QT_QPA_PLATFORM=xcb
 export LIBGL_ALWAYS_SOFTWARE=1
-# Per-user runtime dir (avoid /dev/shm under proot)
+
+# Per-user runtime dir (avoid /dev/shm under proot/chroot)
 [ -d "$HOME/.run" ] || mkdir -p "$HOME/.run"
 chmod 700 "$HOME/.run" 2>/dev/null || true
 export XDG_RUNTIME_DIR="$HOME/.run"
 
+# Dedicated Code profile directory so root won't complain.
+# VS Code yells if you run as uid 0 without --user-data-dir.
+CODE_USER_DIR="$HOME/.vscode-root"
+[ -d "$CODE_USER_DIR" ] || mkdir -p "$CODE_USER_DIR"
+chmod 700 "$CODE_USER_DIR" 2>/dev/null || true
+
 exec /opt/vscode/bin/code \
-  --no-sandbox --disable-setuid-sandbox --disable-dev-shm-usage \
-  --password-store=basic "$@"
+  --no-sandbox \
+  --disable-setuid-sandbox \
+  --disable-dev-shm-usage \
+  --password-store=basic \
+  --user-data-dir="$CODE_USER_DIR" \
+  "$@"
 SH
 sudo chmod +x /usr/local/bin/code-proot
 
@@ -59,7 +72,7 @@ sudo install -d -m 0755 /usr/share/applications
 sudo tee /usr/share/applications/code-proot.desktop >/dev/null <<'SH'
 [Desktop Entry]
 Name=Visual Studio Code (proot)
-Comment=VS Code (tarball) with proot-safe flags
+Comment=VS Code (tarball) with proot/chroot-safe flags
 Exec=/usr/local/bin/code-proot %U
 Icon=/opt/vscode/resources/app/resources/linux/code.png
 Type=Application

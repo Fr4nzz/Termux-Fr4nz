@@ -1,26 +1,19 @@
 #!/data/data/com.termux/files/usr/bin/bash
-# Unattended installer for a browser-accessible VSCodium-like server
-# (openvscode-server) in the rootless (proot/daijin) container.
-#
-# After running this in Termux:
-#   vscodium-server-proot-start
-#   -> open http://127.0.0.1:13337 in mobile browser
-#   vscodium-server-proot-stop
-#
-# Mirrors the rstudio-proot-start/stop style.
-
-set -euo pipefail
+# Unattended installer for openvscode-server in the rootless container.
+set -eu
+( set -o pipefail ) 2>/dev/null && set -o pipefail
 : "${PREFIX:=/data/data/com.termux/files/usr}"
 
-# 1) Run the container-side installer inside the proot container
+# Install inside the container (bash reads stdin)
 curl -fsSL https://raw.githubusercontent.com/Fr4nzz/Termux-Fr4nz/refs/heads/main/container-scripts/install_vscodium_server.sh \
   | ubuntu-proot /bin/bash -s
 
-# 2) Create Termux wrappers
+# Wrappers
 mkdir -p "$PREFIX/bin" "$PREFIX/var/run"
 
 cat >"$PREFIX/bin/vscodium-server-proot-start" <<'SH'
 #!/data/data/com.termux/files/usr/bin/sh
+set -e
 : "${PREFIX:=/data/data/com.termux/files/usr}"
 PIDFILE="$PREFIX/var/run/vscodium-proot.pid"
 mkdir -p "$PREFIX/var/run"
@@ -30,34 +23,39 @@ if [ -f "$PIDFILE" ] && kill -0 "$(cat "$PIDFILE")" 2>/dev/null; then
   exit 0
 fi
 
-# We launch openvscode-server INSIDE the Ubuntu proot container and then
-# keep that proot alive with `sleep infinity`, just like rstudio-proot-start.
-ubuntu-proot /bin/sh -c '
+ubuntu-proot /bin/sh <<'IN' >/dev/null 2>&1 &
+set -e
 export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
-/opt/openvscode-server/bin/openvscode-server \
+nohup /opt/openvscode-server/bin/openvscode-server \
   --host 127.0.0.1 \
   --port 13337 \
   --without-connection-token \
   --server-data-dir "$HOME/.ovscode-data" \
-  --extensions-dir "$HOME/.ovscode-extensions" || true
-sleep infinity
-' &
+  --extensions-dir "$HOME/.ovscode-extensions" >/dev/null 2>&1 &
+exec tail -f /dev/null
+IN
 
 echo $! >"$PIDFILE"
-echo "VSCodium Server (proot) is up."
-echo "Open http://127.0.0.1:13337"
-echo
+echo "VSCodium Server (proot) is up at http://127.0.0.1:13337"
 echo "Stop with: vscodium-server-proot-stop"
 SH
 chmod 0755 "$PREFIX/bin/vscodium-server-proot-start"
 
 cat >"$PREFIX/bin/vscodium-server-proot-stop" <<'SH'
 #!/data/data/com.termux/files/usr/bin/sh
+set -e
 : "${PREFIX:=/data/data/com.termux/files/usr}"
 PIDFILE="$PREFIX/var/run/vscodium-proot.pid"
 
 if [ -f "$PIDFILE" ]; then
   PID="$(cat "$PIDFILE")"
+
+  # optional graceful stop
+  ubuntu-proot /bin/sh <<'IN' >/dev/null 2>&1 || true
+set -e
+pkill -f '/opt/openvscode-server/bin/openvscode-server' || true
+IN
+
   if kill -0 "$PID" 2>/dev/null; then
     kill "$PID" 2>/dev/null || true
     sleep 1

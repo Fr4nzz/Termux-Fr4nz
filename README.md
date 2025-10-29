@@ -160,19 +160,19 @@ vscode-server-chroot-stop
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/Fr4nzz/Termux-Fr4nz/refs/heads/main/termux-scripts/install_vscodium_server_proot_unattended.sh | bash
+```
 vscodium-server-proot-start
  http://127.0.0.1:13337
 vscodium-server-proot-stop
-```
 
 **Rooted / chroot**
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/Fr4nzz/Termux-Fr4nz/refs/heads/main/termux-scripts/install_vscodium_server_chroot_unattended.sh | bash
+```
 vscodium-server-chroot-start
  http://127.0.0.1:13337
 vscodium-server-chroot-stop
-```
 
 > **Security:** By default servers bind to `127.0.0.1` with no auth (safe for same-device use).
 > For LAN access, change wrappers to `0.0.0.0` and enable auth:

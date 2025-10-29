@@ -11,7 +11,7 @@ arch="${1:-}"
 if [ -z "$arch" ]; then
   case "$(dpkg --print-architecture 2>/dev/null || echo "$(uname -m)")" in
     arm64|aarch64) arch="linux-arm64" ;;
-    amd64|x86_64)  arch="linux-x64"   ;;  # just in case someone reuses this on x64
+    amd64|x86_64)  arch="linux-x64"   ;;  # fallback if reused on x86_64
     *)             arch="linux-arm64" ;;
   esac
 fi
@@ -43,7 +43,10 @@ fi
 
 # Electron/X11 + proot-/chroot-friendly env
 export ELECTRON_OZONE_PLATFORM_HINT=x11
+export GDK_BACKEND=x11
 export QT_QPA_PLATFORM=xcb
+export QT_XCB_NO_MITSHM=1
+export QT_QPA_PLATFORMTHEME=gtk3
 export LIBGL_ALWAYS_SOFTWARE=1
 
 # Per-user runtime dir (avoid /dev/shm under proot/chroot)
@@ -52,7 +55,6 @@ chmod 700 "$HOME/.run" 2>/dev/null || true
 export XDG_RUNTIME_DIR="$HOME/.run"
 
 # Dedicated Code profile directory so root won't complain.
-# VS Code yells if you run as uid 0 without --user-data-dir.
 CODE_USER_DIR="$HOME/.vscode-root"
 [ -d "$CODE_USER_DIR" ] || mkdir -p "$CODE_USER_DIR"
 chmod 700 "$CODE_USER_DIR" 2>/dev/null || true
@@ -61,6 +63,7 @@ exec /opt/vscode/bin/code \
   --no-sandbox \
   --disable-setuid-sandbox \
   --disable-dev-shm-usage \
+  --disable-gpu \
   --password-store=basic \
   --user-data-dir="$CODE_USER_DIR" \
   "$@"

@@ -174,6 +174,28 @@ vscodium-server-chroot-start
  http://127.0.0.1:13337
 vscodium-server-chroot-stop
 
+### RStudio Server (browser IDE)
+
+*Runs on `http://127.0.0.1:8787`.*
+
+**Rootless / proot**
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/Fr4nzz/Termux-Fr4nz/refs/heads/main/termux-scripts/install_rstudio_server_proot_unattended.sh | bash
+```
+rstudio-proot-start
+ http://127.0.0.1:8787
+rstudio-proot-stop
+
+**Rooted / chroot**
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/Fr4nzz/Termux-Fr4nz/refs/heads/main/termux-scripts/install_rstudio_server_chroot_unattended.sh | bash
+```
+rstudio-chroot-start
+ http://127.0.0.1:8787
+rstudio-chroot-stop
+
 > **Security:** By default servers bind to `127.0.0.1` with no auth (safe for same-device use).
 > For LAN access, change wrappers to `0.0.0.0` and enable auth:
 >

@@ -99,27 +99,35 @@ TP="$PREFIX/tmp/.X11-unix"
 mkdir -p "$TP" "$PREFIX/bin"
 
 cat >"$PREFIX/bin/ubuntu-proot" <<'SH'
+# /data/data/com.termux/files/usr/bin/ubuntu-proot
 #!/data/data/com.termux/files/usr/bin/sh
-# Interactive/command runner for the ubuntu-proot container.
+# Minimal wrapper for ubuntu-proot container
 : "${PREFIX:=/data/data/com.termux/files/usr}"
 C="/data/data/com.termux/files/home/containers/ubuntu-proot"
-TP="$PREFIX/tmp/.X11-unix"
-[ -d "$TP" ] || mkdir -p "$TP"
+TP="$PREFIX/tmp/.X11-unix"; [ -d "$TP" ] || mkdir -p "$TP"
 
-U="root"; [ -f "$C/etc/ruri/user" ] && U="$(cat "$C/etc/ruri/user")"
 PROOT="$PREFIX/share/daijin/proot_start.sh"
 BIND="-b $TP:/tmp/.X11-unix -b /sdcard:/mnt/sdcard -w /root"
 
+# 0) No args -> interactive login (as configured in your container)
 if [ "$#" -eq 0 ]; then
-  exec "$PROOT" -r "$C" -e "$BIND" /bin/su - "$U"
+  exec "$PROOT" -r "$C" -e "$BIND" /bin/su - root
 fi
 
-# Preserve stdin when running sh via pipe
-if [ ! -t 0 ] && { [ "$1" = "/bin/sh" ] || [ "$1" = "sh" ] || [ "$1" = "-" ]; }; then
-  exec "$PROOT" -r "$C" -e "$BIND" /bin/su - "$U" -s /bin/sh
+# 1) PIPED MODE: read script from stdin with the shell you asked for
+if [ ! -t 0 ]; then
+  case "$1" in
+    /bin/bash|bash) exec "$PROOT" -r "$C" -e "$BIND" /bin/bash -s ;;
+    -|/bin/sh|sh)   exec "$PROOT" -r "$C" -e "$BIND" /bin/sh ;;
+    *)              exec "$PROOT" -r "$C" -e "$BIND" /bin/sh ;;
+  esac
 fi
 
-exec "$PROOT" -r "$C" -e "$BIND" /bin/su - "$U" -s /bin/sh -c 'exec "$@"' sh -- "$@"
+# 2) ARGS (no pipe): run the program directly with a clean container PATH
+exec "$PROOT" -r "$C" -e "$BIND" /usr/bin/env -i \
+  HOME=/root TERM=xterm-256color \
+  PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin \
+  "$@"
 SH
 chmod 0755 "$PREFIX/bin/ubuntu-proot"
 

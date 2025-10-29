@@ -138,9 +138,9 @@ rstudio-proot
 curl -fsSL https://raw.githubusercontent.com/Fr4nzz/Termux-Fr4nz/refs/heads/main/termux-scripts/install_vscode_server_proot_unattended.sh | bash
 ```
 vscode-server-proot-start
-# open in mobile browser:
+open in mobile browser:
    http://127.0.0.1:13338
-# stop when done:
+stop when done:
 vscode-server-proot-stop
 
 **Rooted / chroot**

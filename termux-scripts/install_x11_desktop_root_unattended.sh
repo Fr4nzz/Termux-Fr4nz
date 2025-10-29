@@ -108,6 +108,31 @@ sudo dbus-uuidgen --ensure
 sudo install -d -m 0755 /run/dbus
 '
 
+# --- NEW: unify Desktop for root and the saved desktop user ---
+ubuntu-chroot /bin/bash -lc '
+set -e
+RU="$(cat /etc/ruri/user 2>/dev/null || echo ubuntu)"
+USER_DESK="/home/$RU/Desktop"
+ROOT_DESK="/root/Desktop"
+
+# Ensure the real desktop user has a Desktop dir
+sudo install -d -m 0755 "$USER_DESK"
+sudo chown "$RU:$RU" "$USER_DESK" || true
+
+# Make root/Desktop a symlink to that Desktop,
+# so when XFCE runs as root you see/click the same launchers
+# (code-proot, firefox-proot, etc.).
+if [ -d /root ]; then
+    if [ -L "$ROOT_DESK" ]; then
+        :
+    elif [ -e "$ROOT_DESK" ]; then
+        echo "[setup] /root/Desktop already exists and is not a symlink; leaving it alone."
+    else
+        sudo ln -s "$USER_DESK" "$ROOT_DESK"
+    fi
+fi
+'
+
 # --- xfce4 start/stop wrappers (runtime) ---
 cat >"$BIN/xfce4-chroot-start" <<'SH'
 #!/data/data/com.termux/files/usr/bin/sh

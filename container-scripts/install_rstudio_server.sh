@@ -57,6 +57,7 @@ rm -f "$TMP_DEB"
 # 4) Optional: allow root login to RStudio Server
 #     (set RSTUDIO_ALLOW_ROOT=1 to enable)
 # ----------------------------------------------
+RSTUDIO_ALLOW_ROOT=1
 if [ "${RSTUDIO_ALLOW_ROOT:-}" = "1" ] || [ "${RSTUDIO_ALLOW_ROOT:-}" = "true" ]; then
   install -d -m 0755 /etc/rstudio
   # update/insert auth-minimum-user-id=0

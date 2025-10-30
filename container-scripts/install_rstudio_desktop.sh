@@ -17,7 +17,7 @@ fi
 sudo apt-get install -y \
   curl wget ca-certificates gdebi-core \
   dbus dbus-x11 \
-  libnspr4 libnss3 libxss1 libgbm1 libasound2 \
+  libnspr4 libnss3 libxss1 libgbm1 "$ALSA_PKG" \
   fonts-dejavu-core x11-utils
 
 # ========== 2) Figure out arch + channel and build a "latest" URL ==========

@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+sudo apt-get install -y libsecret-1-0 xdg-utils
+
 sudo tee /usr/local/bin/desktopify >/dev/null <<'SH'
 #!/bin/sh
 set -eu
@@ -14,6 +16,8 @@ for name in "$@"; do
   chmod +x "$desk/$name.desktop"
   chown "$RU:$RU" "$desk/$name.desktop"
 done
+sudo update-desktop-database /usr/share/applications 2>/dev/null || true
+sudo gtk-update-icon-cache -f /usr/share/icons/hicolor 2>/dev/null || true
 SH
 sudo chmod 0755 /usr/local/bin/desktopify
 

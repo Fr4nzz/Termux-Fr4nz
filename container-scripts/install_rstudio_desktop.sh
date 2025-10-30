@@ -2,41 +2,67 @@
 set -euo pipefail
 export DEBIAN_FRONTEND=noninteractive
 
-# 1. ensure R exists first (RStudio Desktop expects R on PATH)
+# ========== 0) Ensure R exists first ==========
 if ! command -v R >/dev/null 2>&1; then
   curl -fsSL https://raw.githubusercontent.com/Fr4nzz/Termux-Fr4nz/refs/heads/main/container-scripts/install_r_binaries.sh | bash
 fi
 
-# 2. pull in Electron/Chromium-style runtime libs that the arm64 build of RStudio uses
-#    plus dbus so we can spawn a minimal system bus in the wrapper
-sudo apt-get update
+# ========== 1) Deps for RStudio Desktop (Electron) ==========
+sudo apt-get update -y
 sudo apt-get install -y \
-    wget gdebi-core \
-    dbus dbus-x11 \
-    libnspr4 libnss3 libxss1 libgbm1 libasound2 || true
+  curl wget ca-certificates gdebi-core \
+  dbus dbus-x11 \
+  libnspr4 libnss3 libxss1 libgbm1 libasound2 \
+  fonts-dejavu-core x11-utils
 
-# 3. download & install the arm64 .deb
-DEB_URL="https://s3.amazonaws.com/rstudio-ide-build/electron/jammy/arm64/rstudio-2025.11.0-daily-271-arm64.deb"
-wget -O /tmp/rstudio-arm64.deb "$DEB_URL"
-sudo gdebi -n /tmp/rstudio-arm64.deb || sudo apt-get -f install -y
+# ========== 2) Figure out arch + channel and build a "latest" URL ==========
+arch="$(dpkg --print-architecture 2>/dev/null || uname -m)"
+case "$arch" in
+  arm64|aarch64) PLATFORM="arm64" ;;
+  amd64|x86_64)  PLATFORM="amd64" ;;
+  *) echo "Unsupported architecture: $arch"; exit 1 ;;
+esac
 
-# 4. install a wrapper that:
-#    - sets safe env for Termux:X11
-#    - creates ~/.rstudio-root for Chromium profile
-#    - forces software rendering / no sandbox
-#    - starts a lightweight system D-Bus if needed
+# Channel: daily|stable.  Default to daily, and FORCE daily on arm64 (stable arm64 Desktop isn't published).
+CHANNEL="${RSTUDIO_CHANNEL:-daily}"
+if [ "$PLATFORM" = "arm64" ] && [ "$CHANNEL" = "stable" ]; then
+  echo "[info] Stable arm64 Desktop not listed by Posit's redirect links; falling back to daily." 1>&2
+  CHANNEL="daily"
+fi
+
+# NB: Posit uses the 'jammy' path for both Ubuntu 22 and 24 in redirect links.
+# These redirect with HTTP 302 to the current build on S3.
+BASE="https://rstudio.org/download/latest/${CHANNEL}/desktop/jammy"
+DEB_URL="${BASE}/rstudio-latest-${PLATFORM}.deb"
+
+tmpdeb="$(mktemp /tmp/rstudio-XXXXXX.deb)"
+echo "[*] Downloading latest RStudio Desktop (${CHANNEL}, ${PLATFORM}) via redirect: ${DEB_URL}"
+curl -fsSL -L "$DEB_URL" -o "$tmpdeb"
+
+# Optional: show what we got
+echo "[*] Saved to $tmpdeb ($(du -h "$tmpdeb" | awk '{print $1}'))"
+
+# ========== 3) Install the .deb (resolve deps if needed) ==========
+if ! sudo gdebi -n "$tmpdeb"; then
+  echo "[warn] gdebi failed; trying dpkg + apt -f install"
+  sudo dpkg -i "$tmpdeb" || true
+  sudo apt-get -f install -y
+fi
+rm -f "$tmpdeb"
+
+# ========== 4) Install the cross-env wrapper: rstudio-desktop ==========
 sudo install -d -m 0755 /usr/local/bin
-sudo tee /usr/local/bin/rstudio-proot >/dev/null <<'SH'
+sudo tee /usr/local/bin/rstudio-desktop >/dev/null <<'SH'
 #!/bin/sh
 set -e
 
-# 1. Require DISPLAY so we don't try to launch headless
+# Require DISPLAY (user should have started Termux:X11 + desktop)
 if [ -z "${DISPLAY:-}" ]; then
-  echo "DISPLAY is not set. Start Termux:X11 (x11-up) and your desktop (xfce4-chroot-start / xfce4-proot-start), or set DISPLAY=:1."
+  echo "DISPLAY is not set. Start Termux:X11 (x11-up) and your desktop (xfce4-*-start), or set DISPLAY=:1."
   exit 1
 fi
 
-# 2. Environment tweaks so Electron is happier in a Termux/Android container
+# Electron/X11 in Android containers
 export ELECTRON_OZONE_PLATFORM_HINT=x11
 export GDK_BACKEND=x11
 export QT_QPA_PLATFORM=xcb
@@ -46,46 +72,38 @@ export LIBGL_ALWAYS_SOFTWARE=1
 export NO_AT_BRIDGE=1
 export GTK_USE_PORTAL=0
 
-# 3. Per-user runtime dir rather than /run/user/... or /dev/shm
+# Per-user runtime dir instead of /run/user or /dev/shm
 [ -d "$HOME/.run" ] || mkdir -p "$HOME/.run"
 chmod 700 "$HOME/.run" 2>/dev/null || true
 export XDG_RUNTIME_DIR="$HOME/.run"
 
-# 4. Make sure a "system" D-Bus exists so Electron doesn't crash
+# Minimal "system" bus if none (helps Electron apps)
 if [ ! -S /run/dbus/system_bus_socket ]; then
   mkdir -p /run/dbus
   dbus-daemon --system --fork >/dev/null 2>&1 || true
 fi
 
-# 5. RStudio profile dir (Chromium hates root using /root without --user-data-dir)
-RSTUDIO_USER_DIR="$HOME/.rstudio-root"
-[ -d "$RSTUDIO_USER_DIR" ] || mkdir -p "$RSTUDIO_USER_DIR"
-chmod 700 "$RSTUDIO_USER_DIR" 2>/dev/null || true
+# Real binary from the .deb
+BIN="/usr/lib/rstudio/rstudio"
+[ -x "$BIN" ] || { echo "Could not find $BIN"; exit 1; }
 
-# 6. Actual RStudio binary from the .deb
-RSTUDIO_BIN="/usr/lib/rstudio/rstudio"
-if [ ! -x "$RSTUDIO_BIN" ]; then
-  echo "Could not find $RSTUDIO_BIN. Edit rstudio-proot if RStudio is somewhere else."
-  exit 1
-fi
-
-# 7. Launch with Chromium flags known to behave in this environment
-exec "$RSTUDIO_BIN" \
+# Chromium flags suitable for Termux/Android containers
+exec "$BIN" \
   --no-sandbox \
-  --user-data-dir="$RSTUDIO_USER_DIR" \
+  --user-data-dir="$HOME/.rstudio-root" \
   --disable-gpu \
   --disable-dev-shm-usage \
   "$@"
 SH
-sudo chmod 0755 /usr/local/bin/rstudio-proot
+sudo chmod 0755 /usr/local/bin/rstudio-desktop
 
-# 5. Drop a desktop file that runs the wrapper instead of raw /usr/lib/rstudio/rstudio
+# ========== 5) Desktop entry and launcher on Desktop ==========
 sudo install -d -m 0755 /usr/share/applications
-sudo tee /usr/share/applications/rstudio-proot.desktop >/dev/null <<'SH'
+sudo tee /usr/share/applications/rstudio-desktop.desktop >/dev/null <<'SH'
 [Desktop Entry]
-Name=RStudio (proot)
+Name=RStudio Desktop
 Comment=RStudio Desktop with Termux/chroot-safe flags
-Exec=/usr/local/bin/rstudio-proot %U
+Exec=/usr/local/bin/rstudio-desktop %U
 Icon=rstudio
 Type=Application
 Categories=Development;Science;IDE;
@@ -93,9 +111,9 @@ Terminal=false
 StartupNotify=true
 SH
 
-# 6. ensure desktopify is around, then put the icon on Desktop
+# Put a launcher on the user's Desktop (your repo provides desktopify)
 command -v desktopify >/dev/null 2>&1 || bash -lc 'curl -fsSL https://raw.githubusercontent.com/Fr4nzz/Termux-Fr4nz/refs/heads/main/container-scripts/install_desktopify.sh | bash'
-desktopify rstudio-proot || true
+desktopify rstudio-desktop || true
 
 echo "✅ RStudio Desktop installed."
-echo "Launch it with: rstudio-proot"
+echo "Run it with: rstudio-desktop"

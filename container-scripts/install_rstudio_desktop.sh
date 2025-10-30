@@ -9,6 +9,11 @@ fi
 
 # ========== 1) Deps for RStudio Desktop (Electron) ==========
 sudo apt-get update -y
+# Pick the right ALSA pkg on this Ubuntu (noble → libasound2t64, jammy → libasound2)
+ALSA_PKG="libasound2"
+if apt-cache show libasound2t64 >/dev/null 2>&1; then
+  ALSA_PKG="libasound2t64"
+fi
 sudo apt-get install -y \
   curl wget ca-certificates gdebi-core \
   dbus dbus-x11 \

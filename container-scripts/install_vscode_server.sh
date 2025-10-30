@@ -30,7 +30,7 @@ sudo install -d -m 0755 /opt/code-server
 # release tarballs are like code-server-<ver>-<arch>/*
 sudo tar -xzf "$tmpdir/code-server.tgz" -C /opt/code-server --strip-components=1
 
-# Helper: run locally on 127.0.0.1:13338, no auth (safe for local phone browser)
+# Helper: run locally on the lan with 0.0.0.0:13337  ---
 sudo install -d -m 0755 /usr/local/bin
 sudo tee /usr/local/bin/code-server-local >/dev/null <<'SH'
 #!/bin/sh
@@ -40,7 +40,7 @@ PORT="${1:-13338}"
 [ -d "$HOME/.code-server-extensions" ] || mkdir -p "$HOME/.code-server-extensions"
 
 exec /opt/code-server/bin/code-server \
-  --bind-addr 127.0.0.1:"$PORT" \
+  --bind-addr 0.0.0.0:"$PORT" \
   --auth none \
   --user-data-dir "$HOME/.code-server-data" \
   --extensions-dir "$HOME/.code-server-extensions" \

@@ -1,17 +1,15 @@
 #!/data/data/com.termux/files/usr/bin/bash
-# Unattended installer for openvscode-server in the rootless container.
 set -eu
 ( set -o pipefail ) 2>/dev/null && set -o pipefail
 : "${PREFIX:=/data/data/com.termux/files/usr}"
 
-# Install inside the container (bash reads stdin)
+# Install inside the container
 curl -fsSL https://raw.githubusercontent.com/Fr4nzz/Termux-Fr4nz/refs/heads/main/container-scripts/install_vscodium_server.sh \
-  | ubuntu-proot
+  | ubuntu-proot /bin/bash -s
 
-# Wrappers
+# Termux wrappers (call Ubuntu wrapper)
 mkdir -p "$PREFIX/bin" "$PREFIX/var/run"
 
-# termux-scripts/install_vscodium_server_proot_unattended.sh
 cat >"$PREFIX/bin/vscodium-server-proot-start" <<'SH'
 #!/data/data/com.termux/files/usr/bin/sh
 set -e
@@ -24,19 +22,17 @@ if [ -f "$PIDFILE" ] && kill -0 "$(cat "$PIDFILE")" 2>/dev/null; then
   exit 0
 fi
 
-ubuntu-proot /bin/sh > /dev/null 2>&1 <<'INNER' &
-export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
-/opt/openvscode-server/bin/openvscode-server \
-  --host 127.0.0.1 \
-  --port 13337 \
-  --without-connection-token \
-  --server-data-dir "$HOME/.ovscode-data" \
-  --extensions-dir "$HOME/.ovscode-extensions" &
-exec sleep infinity
-INNER
+# Call the Ubuntu wrapper directly
+ubuntu-proot /bin/bash -lc 'openvscode-server-local' > /dev/null 2>&1 &
 
 echo $! >"$PIDFILE"
-echo "VSCodium Server (proot) is up at http://127.0.0.1:13337"
+
+# Detect phone IP
+PHONE_IP="$(ip -4 addr show wlan0 2>/dev/null | awk '/inet / {print $2}' | cut -d/ -f1 || true)"
+
+echo "VSCodium Server (proot) is up:"
+echo "  Local:  http://127.0.0.1:13337"
+[ -n "$PHONE_IP" ] && echo "  LAN:    http://$PHONE_IP:13337"
 echo "Stop with: vscodium-server-proot-stop"
 SH
 chmod 0755 "$PREFIX/bin/vscodium-server-proot-start"
@@ -49,13 +45,7 @@ PIDFILE="$PREFIX/var/run/vscodium-proot.pid"
 
 if [ -f "$PIDFILE" ]; then
   PID="$(cat "$PIDFILE")"
-
-  # optional graceful stop
-  ubuntu-proot /bin/sh <<'IN' >/dev/null 2>&1 || true
-set -e
-pkill -f '/opt/openvscode-server/bin/openvscode-server' || true
-IN
-
+  ubuntu-proot /bin/sh -c 'pkill -f "/opt/openvscode-server/bin/openvscode-server"' 2>/dev/null || true
   if kill -0 "$PID" 2>/dev/null; then
     kill "$PID" 2>/dev/null || true
     sleep 1
@@ -71,5 +61,4 @@ fi
 SH
 chmod 0755 "$PREFIX/bin/vscodium-server-proot-stop"
 
-echo "✅ VSCodium Server (proot) installed."
-echo "Use: vscodium-server-proot-start / vscodium-server-proot-stop"
+echo "✅ VSCodium Server (proot) ready: vscodium-server-proot-start / vscodium-server-proot-stop"

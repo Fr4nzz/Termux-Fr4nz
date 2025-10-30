@@ -25,12 +25,15 @@ echo "[*] Downloading $DL_URL"
 curl -L "$DL_URL" -o "$tmpdir/code-server.tgz"
 
 echo "[*] Installing to /opt/code-server…"
-sudo rm -rf /opt/code-server
+if [ -d /opt/code-server ]; then
+  sudo find /opt/code-server -type f -delete 2>/dev/null || true
+  sudo find /opt/code-server -depth -type d -delete 2>/dev/null || true
+  sudo rm -rf /opt/code-server 2>/dev/null || true
+fi
 sudo install -d -m 0755 /opt/code-server
-# release tarballs are like code-server-<ver>-<arch>/*
 sudo tar -xzf "$tmpdir/code-server.tgz" -C /opt/code-server --strip-components=1
 
-# Helper: run locally on the lan with 0.0.0.0:13337  ---
+# Helper: LAN-accessible on 0.0.0.0:13338
 sudo install -d -m 0755 /usr/local/bin
 sudo tee /usr/local/bin/code-server-local >/dev/null <<'SH'
 #!/bin/sh
@@ -51,4 +54,4 @@ sudo chmod 0755 /usr/local/bin/code-server-local
 echo
 echo "✅ code-server installed in /opt/code-server"
 echo "Run inside the container:  code-server-local"
-echo "Open on phone: http://127.0.0.1:13338"
+echo "LAN access: http://<your-phone-ip>:13338"

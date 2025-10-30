@@ -14,7 +14,7 @@ apt-get install -y --no-install-recommends \
   libssl3 libxml2 libcurl4 libedit2 libuuid1 \
   libpq5 libsqlite3-0 libbz2-1.0 liblzma5 libreadline8
 
-RSTUDIO_DEB_URL="https://download2.rstudio.org/server/jammy/amd64/rstudio-server-2023.12.1-402-arm64.deb"
+RSTUDIO_DEB_URL="https://download2.rstudio.org/server/jammy/arm64/rstudio-server-2023.12.1-402-arm64.deb"
 TMP_DEB="$(mktemp --suffix=.deb)"
 wget -O "$TMP_DEB" "$RSTUDIO_DEB_URL"
 gdebi -n "$TMP_DEB" || apt-get -f install -y

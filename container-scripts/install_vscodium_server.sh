@@ -1,13 +1,11 @@
 #!/usr/bin/env bash
-# Install openvscode-server to /opt/openvscode-server,
-# force Open VSX marketplace, and add CLI helpers to install extensions.
 set -euo pipefail
 export DEBIAN_FRONTEND=noninteractive
 
 sudo apt-get update
 sudo apt-get install -y curl ca-certificates tar coreutils jq
 
-# --- 1) Detect arch -> pick correct openvscode-server build name ---
+# Detect arch
 arch="$(dpkg --print-architecture 2>/dev/null || uname -m)"
 case "$arch" in
   arm64|aarch64) OVS_ARCH="linux-arm64" ;;
@@ -15,7 +13,7 @@ case "$arch" in
   *)             OVS_ARCH="linux-arm64" ;;
 esac
 
-# --- 2) Find latest release tarball via GitHub API and install ---
+# Find latest release tarball
 tmpdir="$(mktemp -d)"; trap 'rm -rf "$tmpdir"' EXIT
 echo "[*] Fetching latest openvscode-server release URL for $OVS_ARCH…"
 LATEST_URL="$(curl -fsSL https://api.github.com/repos/gitpod-io/openvscode-server/releases/latest \
@@ -27,11 +25,15 @@ echo "[*] Downloading: $LATEST_URL"
 curl -L "$LATEST_URL" -o "$tmpdir/openvscode-server.tar.gz"
 
 echo "[*] Installing to /opt/openvscode-server …"
-sudo rm -rf /opt/openvscode-server
+if [ -d /opt/openvscode-server ]; then
+  sudo find /opt/openvscode-server -type f -delete 2>/dev/null || true
+  sudo find /opt/openvscode-server -depth -type d -delete 2>/dev/null || true
+  sudo rm -rf /opt/openvscode-server 2>/dev/null || true
+fi
 sudo install -d -m 0755 /opt/openvscode-server
 sudo tar -xzf "$tmpdir/openvscode-server.tar.gz" -C /opt/openvscode-server --strip-components=1
 
-# --- 3) Force Open VSX marketplace in openvscode-server's product.json ---
+# Force Open VSX marketplace
 if [ -f /opt/openvscode-server/product.json ]; then
   echo "[*] Patching Open VSX marketplace in: /opt/openvscode-server/product.json"
   sudo cp /opt/openvscode-server/product.json /opt/openvscode-server/product.json.bak.$(date +%s) || true
@@ -46,7 +48,7 @@ if [ -f /opt/openvscode-server/product.json ]; then
   sudo mv /opt/openvscode-server/product.json.tmp /opt/openvscode-server/product.json
 fi
 
-# --- 4) Helper: run locally on the lan with 0.0.0.0:13337  ---
+# Helper: LAN-accessible on 0.0.0.0:13337
 sudo install -d -m 0755 /usr/local/bin
 sudo tee /usr/local/bin/openvscode-server-local >/dev/null <<'SH'
 #!/bin/sh
@@ -65,17 +67,10 @@ exec /opt/openvscode-server/bin/openvscode-server \
 SH
 sudo chmod 0755 /usr/local/bin/openvscode-server-local
 
-# --- 5) Helper: install extensions into the server's extensions dir ---
+# Extension installer helper
 sudo tee /usr/local/bin/openvscode-server-install-extensions >/dev/null <<'SH'
 #!/bin/sh
 set -e
-# Usage:
-#   openvscode-server-install-extensions ms-python.python esbenp.prettier-vscode
-# or:
-#   OPENVSCODE_EXTENSIONS="ms-python.python esbenp.prettier-vscode" openvscode-server-install-extensions
-# or:
-#   echo -e "ms-python.python\nesbenp.prettier-vscode" > ~/.ovscode-extensions.txt
-#   openvscode-server-install-extensions
 LIST="$@"
 [ -z "$LIST" ] && [ -n "${OPENVSCODE_EXTENSIONS:-}" ] && LIST="$OPENVSCODE_EXTENSIONS"
 if [ -z "$LIST" ] && [ -f "$HOME/.ovscode-extensions.txt" ]; then
@@ -101,10 +96,8 @@ sudo chmod 0755 /usr/local/bin/openvscode-server-install-extensions
 
 echo
 echo "✅ openvscode-server installed in /opt/openvscode-server (Open VSX enabled)."
-echo "Start locally:  openvscode-server-local"
-echo "Install extensions now (Open VSX IDs), e.g.:"
-echo "  openvscode-server-install-extensions ms-python.python ms-toolsai.jupyter esbenp.prettier-vscode"
-# optional one-shot via env at install time:
+echo "Start:  openvscode-server-local"
+echo "LAN access: http://<your-phone-ip>:13337"
 if [ -n "${OPENVSCODE_EXTENSIONS:-}" ]; then
   echo "[*] Installing OPENVSCODE_EXTENSIONS from env…"
   openvscode-server-install-extensions >/dev/null || true

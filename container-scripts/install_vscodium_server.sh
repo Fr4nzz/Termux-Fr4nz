@@ -46,7 +46,7 @@ if [ -f /opt/openvscode-server/product.json ]; then
   sudo mv /opt/openvscode-server/product.json.tmp /opt/openvscode-server/product.json
 fi
 
-# --- 4) Helper: run locally on 127.0.0.1:13337 (unchanged) ---
+# --- 4) Helper: run locally on the lan with 0.0.0.0:13337  ---
 sudo install -d -m 0755 /usr/local/bin
 sudo tee /usr/local/bin/openvscode-server-local >/dev/null <<'SH'
 #!/bin/sh
@@ -56,7 +56,7 @@ PORT="${1:-13337}"
 [ -d "$HOME/.ovscode-extensions" ] || mkdir -p "$HOME/.ovscode-extensions"
 
 exec /opt/openvscode-server/bin/openvscode-server \
-  --host 127.0.0.1 \
+  --host 0.0.0.0 \
   --port "$PORT" \
   --without-connection-token \
   --server-data-dir "$HOME/.ovscode-data" \

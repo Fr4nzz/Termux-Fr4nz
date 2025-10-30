@@ -6,11 +6,12 @@ set -eu
 
 # Install inside the container (bash reads stdin)
 curl -fsSL https://raw.githubusercontent.com/Fr4nzz/Termux-Fr4nz/refs/heads/main/container-scripts/install_vscodium_server.sh \
-  | ubuntu-proot /bin/bash -s
+  | ubuntu-proot
 
 # Wrappers
 mkdir -p "$PREFIX/bin" "$PREFIX/var/run"
 
+# termux-scripts/install_vscodium_server_proot_unattended.sh
 cat >"$PREFIX/bin/vscodium-server-proot-start" <<'SH'
 #!/data/data/com.termux/files/usr/bin/sh
 set -e
@@ -23,17 +24,16 @@ if [ -f "$PIDFILE" ] && kill -0 "$(cat "$PIDFILE")" 2>/dev/null; then
   exit 0
 fi
 
-ubuntu-proot /bin/sh <<'IN' >/dev/null 2>&1 &
-set -e
+ubuntu-proot /bin/sh > /dev/null 2>&1 <<'INNER' &
 export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
-nohup /opt/openvscode-server/bin/openvscode-server \
+/opt/openvscode-server/bin/openvscode-server \
   --host 127.0.0.1 \
   --port 13337 \
   --without-connection-token \
   --server-data-dir "$HOME/.ovscode-data" \
-  --extensions-dir "$HOME/.ovscode-extensions" >/dev/null 2>&1 &
-exec tail -f /dev/null
-IN
+  --extensions-dir "$HOME/.ovscode-extensions" &
+exec sleep infinity
+INNER
 
 echo $! >"$PIDFILE"
 echo "VSCodium Server (proot) is up at http://127.0.0.1:13337"

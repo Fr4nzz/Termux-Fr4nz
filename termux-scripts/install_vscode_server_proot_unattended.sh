@@ -5,7 +5,7 @@ set -eu
 
 # Install inside the container (bash reads stdin)
 curl -fsSL https://raw.githubusercontent.com/Fr4nzz/Termux-Fr4nz/refs/heads/main/container-scripts/install_vscode_server.sh \
-  | ubuntu-proot /bin/bash -s
+  | ubuntu-proot
 
 # Wrappers
 mkdir -p "$PREFIX/bin" "$PREFIX/var/run"

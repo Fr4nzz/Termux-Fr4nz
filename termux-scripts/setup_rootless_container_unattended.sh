@@ -99,35 +99,38 @@ TP="$PREFIX/tmp/.X11-unix"
 mkdir -p "$TP" "$PREFIX/bin"
 
 cat >"$PREFIX/bin/ubuntu-proot" <<'SH'
-# /data/data/com.termux/files/usr/bin/ubuntu-proot
 #!/data/data/com.termux/files/usr/bin/sh
-# Minimal wrapper for ubuntu-proot container
 : "${PREFIX:=/data/data/com.termux/files/usr}"
-C="/data/data/com.termux/files/home/containers/ubuntu-proot"
+C="$HOME/containers/ubuntu-proot"
 TP="$PREFIX/tmp/.X11-unix"; [ -d "$TP" ] || mkdir -p "$TP"
 
+# Parse --user flag
+U=""; [ "$1" = "--user" ] && { U="$2"; shift 2; }
+[ -z "$U" ] && U="$(cat "$C/etc/ruri/user" 2>/dev/null || echo root)"
+
+# Setup
 PROOT="$PREFIX/share/daijin/proot_start.sh"
-BIND="-b $TP:/tmp/.X11-unix -b /sdcard:/mnt/sdcard -w /root"
+BIND="-b $TP:/tmp/.X11-unix -b /sdcard:/mnt/sdcard"
+HOME_DIR="/root"; [ "$U" != "root" ] && HOME_DIR="/home/$U"
+ENV="/usr/bin/env -i HOME=$HOME_DIR TERM=${TERM:-xterm-256color} PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin LANG=${LANG:-en_US.UTF-8}"
 
-# 0) No args -> interactive login (as configured in your container)
-if [ "$#" -eq 0 ]; then
-  exec "$PROOT" -r "$C" -e "$BIND" /bin/su - root
-fi
+# No args → interactive login
+[ "$#" -eq 0 ] && exec "$PROOT" -r "$C" -e "$BIND" $ENV /bin/su - "$U"
 
-# 1) PIPED MODE: read script from stdin with the shell you asked for
+# Piped/redirected input → run shell reading from stdin
 if [ ! -t 0 ]; then
+  SHELL="/bin/sh"
   case "$1" in
-    /bin/bash|bash) exec "$PROOT" -r "$C" -e "$BIND" /bin/bash -s ;;
-    -|/bin/sh|sh)   exec "$PROOT" -r "$C" -e "$BIND" /bin/sh ;;
-    *)              exec "$PROOT" -r "$C" -e "$BIND" /bin/sh ;;
+    /bin/bash|bash) SHELL="/bin/bash"; shift ;;
+    /bin/sh|sh|-) shift ;;
   esac
+  exec "$PROOT" -r "$C" -e "$BIND" $ENV /bin/su - "$U" <<SUEOF
+exec $SHELL
+SUEOF
 fi
 
-# 2) ARGS (no pipe): run the program directly with a clean container PATH
-exec "$PROOT" -r "$C" -e "$BIND" /usr/bin/env -i \
-  HOME=/root TERM=xterm-256color \
-  PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin \
-  "$@"
+# Run command as user
+exec "$PROOT" -r "$C" -e "$BIND" $ENV /bin/su - "$U" -c 'exec "$@"' sh -- "$@"
 SH
 chmod 0755 "$PREFIX/bin/ubuntu-proot"
 

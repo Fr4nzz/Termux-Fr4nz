@@ -2,8 +2,8 @@
 set -euo pipefail
 export DEBIAN_FRONTEND=noninteractive
 
-sudo apt-get update
-sudo apt-get install -y curl ca-certificates tar coreutils jq
+apt-get update
+apt-get install -y curl ca-certificates tar coreutils jq
 
 # Detect arch
 arch="$(dpkg --print-architecture 2>/dev/null || uname -m)"
@@ -26,31 +26,33 @@ curl -L "$LATEST_URL" -o "$tmpdir/openvscode-server.tar.gz"
 
 echo "[*] Installing to /opt/openvscode-server …"
 if [ -d /opt/openvscode-server ]; then
-  sudo find /opt/openvscode-server -type f -delete 2>/dev/null || true
-  sudo find /opt/openvscode-server -depth -type d -delete 2>/dev/null || true
-  sudo rm -rf /opt/openvscode-server 2>/dev/null || true
+  find /opt/openvscode-server -type f -delete 2>/dev/null || true
+  find /opt/openvscode-server -depth -type d -delete 2>/dev/null || true
+  rm -rf /opt/openvscode-server 2>/dev/null || true
 fi
-sudo install -d -m 0755 /opt/openvscode-server
-sudo tar -xzf "$tmpdir/openvscode-server.tar.gz" -C /opt/openvscode-server --strip-components=1
+install -d -m 0755 /opt/openvscode-server
+tar -xzf "$tmpdir/openvscode-server.tar.gz" -C /opt/openvscode-server --strip-components=1
 
 # Force Open VSX marketplace
 if [ -f /opt/openvscode-server/product.json ]; then
   echo "[*] Patching Open VSX marketplace in: /opt/openvscode-server/product.json"
-  sudo cp /opt/openvscode-server/product.json /opt/openvscode-server/product.json.bak.$(date +%s) || true
-  sudo jq '
+  cp /opt/openvscode-server/product.json /opt/openvscode-server/product.json.bak.$(date +%s) || true
+  jq '
     .extensionsGallery = {
       serviceUrl: "https://open-vsx.org/vscode/gallery",
       itemUrl:    "https://open-vsx.org/vscode/item"
     }
     | .linkProtectionTrustedDomains =
         ((.linkProtectionTrustedDomains // []) + ["https://open-vsx.org"] | unique)
-  ' /opt/openvscode-server/product.json | sudo tee /opt/openvscode-server/product.json.tmp >/dev/null
-  sudo mv /opt/openvscode-server/product.json.tmp /opt/openvscode-server/product.json
+  ' /opt/openvscode-server/product.json > /opt/openvscode-server/product.json.tmp
+  mv /opt/openvscode-server/product.json.tmp /opt/openvscode-server/product.json
 fi
 
-# Helper: LAN-accessible on 0.0.0.0:13337
-sudo install -d -m 0755 /usr/local/bin
-sudo tee /usr/local/bin/openvscode-server-local >/dev/null <<'SH'
+# Helper scripts
+install -d -m 0755 /usr/local/bin
+
+# Start helper
+tee /usr/local/bin/openvscode-server-local >/dev/null <<'SCRIPT'
 #!/bin/sh
 set -e
 PORT="${1:-13337}"
@@ -64,11 +66,20 @@ exec /opt/openvscode-server/bin/openvscode-server \
   --server-data-dir "$HOME/.ovscode-data" \
   --extensions-dir "$HOME/.ovscode-extensions" \
   "$@"
-SH
-sudo chmod 0755 /usr/local/bin/openvscode-server-local
+SCRIPT
+chmod 0755 /usr/local/bin/openvscode-server-local
+
+# Stop helper
+tee /usr/local/bin/openvscode-server-stop >/dev/null <<'SCRIPT'
+#!/bin/sh
+set -e
+pkill -9 -f '/opt/openvscode-server/bin/openvscode-server' 2>/dev/null || true
+echo "✅ openvscode-server stopped"
+SCRIPT
+chmod 0755 /usr/local/bin/openvscode-server-stop
 
 # Extension installer helper
-sudo tee /usr/local/bin/openvscode-server-install-extensions >/dev/null <<'SH'
+tee /usr/local/bin/openvscode-server-install-extensions >/dev/null <<'SCRIPT'
 #!/bin/sh
 set -e
 LIST="$@"
@@ -91,12 +102,13 @@ for ext in $LIST; do
     --extensions-dir "$EXT_DIR" >/dev/null
 done
 echo "Done."
-SH
-sudo chmod 0755 /usr/local/bin/openvscode-server-install-extensions
+SCRIPT
+chmod 0755 /usr/local/bin/openvscode-server-install-extensions
 
 echo
 echo "✅ openvscode-server installed in /opt/openvscode-server (Open VSX enabled)."
 echo "Start:  openvscode-server-local"
+echo "Stop:   openvscode-server-stop"
 echo "LAN access: http://<your-phone-ip>:13337"
 if [ -n "${OPENVSCODE_EXTENSIONS:-}" ]; then
   echo "[*] Installing OPENVSCODE_EXTENSIONS from env…"

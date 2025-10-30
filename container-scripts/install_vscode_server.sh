@@ -2,8 +2,8 @@
 set -euo pipefail
 export DEBIAN_FRONTEND=noninteractive
 
-sudo apt-get update
-sudo apt-get install -y curl ca-certificates tar coreutils
+apt-get update
+apt-get install -y curl ca-certificates tar coreutils
 
 # Detect arch
 arch="$(dpkg --print-architecture 2>/dev/null || uname -m)"
@@ -26,16 +26,18 @@ curl -L "$DL_URL" -o "$tmpdir/code-server.tgz"
 
 echo "[*] Installing to /opt/code-server…"
 if [ -d /opt/code-server ]; then
-  sudo find /opt/code-server -type f -delete 2>/dev/null || true
-  sudo find /opt/code-server -depth -type d -delete 2>/dev/null || true
-  sudo rm -rf /opt/code-server 2>/dev/null || true
+  find /opt/code-server -type f -delete 2>/dev/null || true
+  find /opt/code-server -depth -type d -delete 2>/dev/null || true
+  rm -rf /opt/code-server 2>/dev/null || true
 fi
-sudo install -d -m 0755 /opt/code-server
-sudo tar -xzf "$tmpdir/code-server.tgz" -C /opt/code-server --strip-components=1
+install -d -m 0755 /opt/code-server
+tar -xzf "$tmpdir/code-server.tgz" -C /opt/code-server --strip-components=1
 
-# Helper: LAN-accessible on 0.0.0.0:13338
-sudo install -d -m 0755 /usr/local/bin
-sudo tee /usr/local/bin/code-server-local >/dev/null <<'SH'
+# Helper scripts
+install -d -m 0755 /usr/local/bin
+
+# Start helper
+tee /usr/local/bin/code-server-local >/dev/null <<'SCRIPT'
 #!/bin/sh
 set -e
 PORT="${1:-13338}"
@@ -48,10 +50,20 @@ exec /opt/code-server/bin/code-server \
   --user-data-dir "$HOME/.code-server-data" \
   --extensions-dir "$HOME/.code-server-extensions" \
   "$@"
-SH
-sudo chmod 0755 /usr/local/bin/code-server-local
+SCRIPT
+chmod 0755 /usr/local/bin/code-server-local
+
+# Stop helper
+tee /usr/local/bin/code-server-stop >/dev/null <<'SCRIPT'
+#!/bin/sh
+set -e
+pkill -9 -f '/opt/code-server/bin/code-server' 2>/dev/null || true
+echo "✅ code-server stopped"
+SCRIPT
+chmod 0755 /usr/local/bin/code-server-stop
 
 echo
 echo "✅ code-server installed in /opt/code-server"
-echo "Run inside the container:  code-server-local"
+echo "Start:  code-server-local"
+echo "Stop:   code-server-stop"
 echo "LAN access: http://<your-phone-ip>:13338"

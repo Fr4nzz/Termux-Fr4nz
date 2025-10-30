@@ -101,33 +101,37 @@ mkdir -p "$TP" "$PREFIX/bin"
 cat >"$PREFIX/bin/ubuntu-proot" <<'SH'
 # /data/data/com.termux/files/usr/bin/ubuntu-proot
 #!/data/data/com.termux/files/usr/bin/sh
-# Minimal wrapper for ubuntu-proot container
+# Interactive/command runner for the ubuntu-proot container.
+
 : "${PREFIX:=/data/data/com.termux/files/usr}"
 C="/data/data/com.termux/files/home/containers/ubuntu-proot"
-TP="$PREFIX/tmp/.X11-unix"; [ -d "$TP" ] || mkdir -p "$TP"
+TP="$PREFIX/tmp/.X11-unix"
+[ -d "$TP" ] || mkdir -p "$TP"
+
+# Pick user: default root, or value from /etc/ruri/user inside the container.
+U="root"
+[ -f "$C/etc/ruri/user" ] && U="$(cat "$C/etc/ruri/user")"
 
 PROOT="$PREFIX/share/daijin/proot_start.sh"
-BIND="-b $TP:/tmp/.X11-unix -b /sdcard:/mnt/sdcard -w /root"
+BIND="-b $TP:/tmp/.X11-unix -b /sdcard:/mnt/sdcard"
 
-# 0) No args -> interactive login (as configured in your container)
+# Minimal, clean environment for the container so PATH is always correct.
+BASE_ENV="/usr/bin/env -i HOME=/root TERM=$TERM PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin LANG=${LANG:-C.UTF-8}"
+
+# No args → interactive login shell as $U
 if [ "$#" -eq 0 ]; then
-  exec "$PROOT" -r "$C" -e "$BIND" /bin/su - root
+  exec "$PROOT" -r "$C" -e "$BIND" $BASE_ENV /bin/su - "$U"
 fi
 
-# 1) PIPED MODE: read script from stdin with the shell you asked for
-if [ ! -t 0 ]; then
-  case "$1" in
-    /bin/bash|bash) exec "$PROOT" -r "$C" -e "$BIND" /bin/bash -s ;;
-    -|/bin/sh|sh)   exec "$PROOT" -r "$C" -e "$BIND" /bin/sh ;;
-    *)              exec "$PROOT" -r "$C" -e "$BIND" /bin/sh ;;
-  esac
+# If stdin is a pipe and the caller asked for sh/bash, preserve stdin
+if [ ! -t 0 ] && { [ "$1" = "/bin/sh" ] || [ "$1" = "sh" ] || [ "$1" = "/bin/bash" ] || [ "$1" = "bash" ] || [ "$1" = "-" ]; }; then
+  # Default to bash if requested, else sh
+  SHELL_BIN="/bin/sh"; [ "$1" = "/bin/bash" ] || [ "$1" = "bash" ] && SHELL_BIN="/bin/bash"
+  exec "$PROOT" -r "$C" -e "$BIND" $BASE_ENV /bin/su - "$U" -s "$SHELL_BIN"
 fi
 
-# 2) ARGS (no pipe): run the program directly with a clean container PATH
-exec "$PROOT" -r "$C" -e "$BIND" /usr/bin/env -i \
-  HOME=/root TERM=xterm-256color \
-  PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin \
-  "$@"
+# Run arbitrary commands as $U
+exec "$PROOT" -r "$C" -e "$BIND" $BASE_ENV /bin/su - "$U" -s /bin/sh -c 'exec "$@"' sh -- "$@"
 SH
 chmod 0755 "$PREFIX/bin/ubuntu-proot"
 

@@ -105,32 +105,44 @@ C="$HOME/containers/ubuntu-proot"
 TP="$PREFIX/tmp/.X11-unix"; [ -d "$TP" ] || mkdir -p "$TP"
 
 # Parse --user flag
-U=""; [ "$1" = "--user" ] && { U="$2"; shift 2; }
-[ -z "$U" ] && U="root"  # ← Changed: default to root instead of saved user
+U="root"  # default to root
+if [ "$1" = "--user" ]; then
+  U="$2"
+  shift 2
+fi
 
 # Setup
 PROOT="$PREFIX/share/daijin/proot_start.sh"
 BIND="-b $TP:/tmp/.X11-unix -b /sdcard:/mnt/sdcard"
 HOME_DIR="/root"; [ "$U" != "root" ] && HOME_DIR="/home/$U"
-ENV="/usr/bin/env -i HOME=$HOME_DIR TERM=${TERM:-xterm-256color} PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin LANG=${LANG:-en_US.UTF-8}"
 
-# No args → interactive login
-[ "$#" -eq 0 ] && exec "$PROOT" -r "$C" -e "$BIND" $ENV /bin/su - "$U"
+# Common env setup
+ENV_SETUP="/usr/bin/env -i HOME=$HOME_DIR TERM=${TERM:-xterm-256color} PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin LANG=${LANG:-en_US.UTF-8}"
+
+# No args → interactive login as user
+if [ "$#" -eq 0 ]; then
+  exec "$PROOT" -r "$C" -e "$BIND" $ENV_SETUP /bin/su - "$U"
+fi
 
 # Piped/redirected input → run shell reading from stdin
 if [ ! -t 0 ]; then
-  SHELL="/bin/sh"
+  # Determine which shell to use
+  SHELL_BIN="/bin/bash"
   case "$1" in
-    /bin/bash|bash) SHELL="/bin/bash"; shift ;;
-    /bin/sh|sh|-) shift ;;
+    /bin/sh|sh) SHELL_BIN="/bin/sh"; shift ;;
+    /bin/bash|bash) SHELL_BIN="/bin/bash"; shift ;;
   esac
-  exec "$PROOT" -r "$C" -e "$BIND" $ENV /bin/su - "$U" <<SUEOF
-exec $SHELL
-SUEOF
+  
+  # Handle -s flag (read from stdin)
+  if [ "$1" = "-s" ]; then
+    shift
+  fi
+  
+  exec "$PROOT" -r "$C" -e "$BIND" $ENV_SETUP "$SHELL_BIN"
 fi
 
-# Run command as user
-exec "$PROOT" -r "$C" -e "$BIND" $ENV /bin/su - "$U" -c 'exec "$@"' sh -- "$@"
+# Run command directly (no su, just exec the command)
+exec "$PROOT" -r "$C" -e "$BIND" $ENV_SETUP "$@"
 SH
 chmod 0755 "$PREFIX/bin/ubuntu-proot"
 

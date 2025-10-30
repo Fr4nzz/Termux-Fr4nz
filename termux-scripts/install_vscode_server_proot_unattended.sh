@@ -3,11 +3,11 @@ set -eu
 ( set -o pipefail ) 2>/dev/null && set -o pipefail
 : "${PREFIX:=/data/data/com.termux/files/usr}"
 
-# Install inside the container (bash reads stdin)
+# Install inside the container
 curl -fsSL https://raw.githubusercontent.com/Fr4nzz/Termux-Fr4nz/refs/heads/main/container-scripts/install_vscode_server.sh \
-  | ubuntu-proot
+  | ubuntu-proot /bin/bash -s
 
-# Wrappers
+# Termux wrappers (call Ubuntu wrapper)
 mkdir -p "$PREFIX/bin" "$PREFIX/var/run"
 
 cat >"$PREFIX/bin/vscode-server-proot-start" <<'SH'
@@ -22,19 +22,17 @@ if [ -f "$PIDFILE" ] && kill -0 "$(cat "$PIDFILE")" 2>/dev/null; then
   exit 0
 fi
 
-ubuntu-proot /bin/sh <<'IN' >/dev/null 2>&1 &
-set -e
-export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
-nohup /opt/code-server/bin/code-server \
-  --bind-addr 127.0.0.1:13338 \
-  --auth none \
-  --user-data-dir "$HOME/.code-server-data" \
-  --extensions-dir "$HOME/.code-server-extensions" >/dev/null 2>&1 &
-exec tail -f /dev/null
-IN
+# Call the Ubuntu wrapper directly
+ubuntu-proot /bin/bash -lc 'code-server-local' > /dev/null 2>&1 &
 
 echo $! >"$PIDFILE"
-echo "VS Code Server (proot) is up on http://127.0.0.1:13338"
+
+# Detect phone IP
+PHONE_IP="$(ip -4 addr show wlan0 2>/dev/null | awk '/inet / {print $2}' | cut -d/ -f1 || true)"
+
+echo "VS Code Server (proot) is up:"
+echo "  Local:  http://127.0.0.1:13338"
+[ -n "$PHONE_IP" ] && echo "  LAN:    http://$PHONE_IP:13338"
 echo "Stop with: vscode-server-proot-stop"
 SH
 chmod 0755 "$PREFIX/bin/vscode-server-proot-start"
@@ -47,13 +45,7 @@ PIDFILE="$PREFIX/var/run/vscode-proot.pid"
 
 if [ -f "$PIDFILE" ]; then
   PID="$(cat "$PIDFILE")"
-
-  # optional graceful stop inside the container
-  ubuntu-proot /bin/sh <<'IN' >/dev/null 2>&1 || true
-set -e
-pkill -f '/opt/code-server/bin/code-server' || true
-IN
-
+  ubuntu-proot /bin/sh -c 'pkill -f "/opt/code-server/bin/code-server"' 2>/dev/null || true
   if kill -0 "$PID" 2>/dev/null; then
     kill "$PID" 2>/dev/null || true
     sleep 1

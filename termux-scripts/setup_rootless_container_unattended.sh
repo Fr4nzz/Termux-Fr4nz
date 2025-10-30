@@ -106,7 +106,7 @@ TP="$PREFIX/tmp/.X11-unix"; [ -d "$TP" ] || mkdir -p "$TP"
 
 # Parse --user flag
 U=""; [ "$1" = "--user" ] && { U="$2"; shift 2; }
-[ -z "$U" ] && U="$(cat "$C/etc/ruri/user" 2>/dev/null || echo root)"
+[ -z "$U" ] && U="root"  # ← Changed: default to root instead of saved user
 
 # Setup
 PROOT="$PREFIX/share/daijin/proot_start.sh"

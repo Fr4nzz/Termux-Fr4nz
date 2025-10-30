@@ -4,11 +4,11 @@ set -eu
 ( set -o pipefail ) 2>/dev/null && set -o pipefail
 : "${PREFIX:=/data/data/com.termux/files/usr}"
 
-# Install inside the rootless container (bash reads stdin)
+# 1) Install RStudio Server inside the rootless container (proot)
 curl -fsSL https://raw.githubusercontent.com/Fr4nzz/Termux-Fr4nz/refs/heads/main/container-scripts/install_rstudio_server.sh \
   | ubuntu-proot /bin/bash -s
 
-# Wrappers
+# 2) Wrappers
 mkdir -p "$PREFIX/bin" "$PREFIX/var/run"
 
 cat >"$PREFIX/bin/rstudio-proot-start" <<'SH'
@@ -23,15 +23,23 @@ if [ -f "$PIDFILE" ] && kill -0 "$(cat "$PIDFILE")" 2>/dev/null; then
   exit 0
 fi
 
+# Start the server inside the proot; keep a tiny tail running so we can stop it later.
 ubuntu-proot /bin/sh <<'IN' >/dev/null 2>&1 &
 set -e
 export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
-sudo rstudio-server start || true
+# Start (prefer sudo, but fall back to direct)
+sudo rstudio-server start 2>/dev/null || rstudio-server start || true
+# Keep process alive (PID tracked by Termux wrapper)
 exec tail -f /dev/null
 IN
 
 echo $! >"$PIDFILE"
-echo "RStudio Server (proot) on http://127.0.0.1:8787"
+
+# Host-side URLs
+PHONE_IP="$(ip -4 addr show wlan0 2>/dev/null | awk '/inet / {print $2}' | cut -d/ -f1 || true)"
+echo "RStudio Server (proot) is up:"
+echo "  Local:  http://127.0.0.1:8787"
+[ -n "$PHONE_IP" ] && echo "  LAN:    http://$PHONE_IP:8787"
 echo "Stop with: rstudio-proot-stop"
 SH
 chmod 0755 "$PREFIX/bin/rstudio-proot-start"
@@ -42,15 +50,19 @@ set -e
 : "${PREFIX:=/data/data/com.termux/files/usr}"
 PIDFILE="$PREFIX/var/run/rstudio-proot.pid"
 
-if [ -f "$PIDFILE" ]; then
-  PID="$(cat "$PIDFILE")"
-
-  ubuntu-proot /bin/sh <<'IN' >/dev/null 2>&1 || true
+# First, stop the real server inside the proot
+ubuntu-proot /bin/sh <<'IN' >/dev/null 2>&1 || true
 set -e
 export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
-sudo rstudio-server stop || true
+sudo rstudio-server stop 2>/dev/null || rstudio-server stop || true
+# Make sure the daemon is gone (fallback)
+pkill -f '/usr/lib/rstudio-server/bin/rserver' 2>/dev/null || true
+pkill -f '[r]server' 2>/dev/null || true
 IN
 
+# Then clean up our background keeper
+if [ -f "$PIDFILE" ]; then
+  PID="$(cat "$PIDFILE")"
   if kill -0 "$PID" 2>/dev/null; then
     kill "$PID" 2>/dev/null || true
     sleep 1
@@ -66,4 +78,4 @@ fi
 SH
 chmod 0755 "$PREFIX/bin/rstudio-proot-stop"
 
-echo "✅ RStudio Server (proot) installed. Use: rstudio-proot-start / rstudio-proot-stop"
+echo "✅ RStudio Server (proot) ready: rstudio-proot-start / rstudio-proot-stop"

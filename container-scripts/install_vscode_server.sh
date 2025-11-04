@@ -54,32 +54,10 @@ chown -R root:root /root
 # Helper scripts
 install -d -m 0755 /usr/local/bin
 
-# Single wrapper with DPI support
 tee /usr/local/bin/code-server-local >/dev/null <<'SCRIPT'
 #!/bin/sh
 set -e
-
-# Parse arguments
-PORT="13338"
-DPI=""
-
-while [ $# -gt 0 ]; do
-  case "$1" in
-    --dpi)
-      DPI="$2"
-      shift 2
-      ;;
-    --port)
-      PORT="$2"
-      shift 2
-      ;;
-    *)
-      PORT="$1"
-      shift
-      ;;
-  esac
-done
-
+PORT="${1:-13338}"
 export HOME="${HOME:-/root}"
 mkdir -p "$HOME/.code-server-data" "$HOME/.code-server-extensions"
 
@@ -89,27 +67,13 @@ echo "========================================="
 echo "VS Code Server"
 echo "========================================="
 echo ""
-echo "Access options:"
-echo "  1. Phone browser:  http://127.0.0.1:$PORT"
-echo "  2. Laptop via ADB: adb forward tcp:$PORT tcp:$PORT"
-echo "                     then http://127.0.0.1:$PORT"
-echo "  3. Laptop via LAN: http://$LOCAL_IP:$PORT"
+echo "Access: http://127.0.0.1:$PORT"
+echo "LAN:    http://$LOCAL_IP:$PORT"
 echo ""
-if [ -n "$DPI" ]; then
-  echo "📱 DPI override: $DPI (smaller UI for phone)"
-  echo ""
-fi
-echo "ℹ️  For ChatGPT/Gemini to work:"
-echo "   - Use http://127.0.0.1:$PORT (options 1 or 2)"
-echo "   - Webviews don't work on LAN IP (option 3)"
+echo "💡 Zoom UI: Ctrl+Plus/Minus or pinch gesture"
 echo ""
 echo "Press Ctrl+C to stop"
 echo "========================================="
-
-# Set DPI if specified (higher DPI = smaller UI)
-if [ -n "$DPI" ]; then
-  export VSCODE_FORCE_DPI="$DPI"
-fi
 
 exec /opt/code-server/bin/code-server \
   --bind-addr "0.0.0.0:$PORT" \

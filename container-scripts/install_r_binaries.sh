@@ -38,7 +38,7 @@ Pin-Priority: 700
 EOF
 
 sudo apt-get update -y
-sudo apt-get install -y --no-install-recommends r-base r-base-dev python3-apt sudo ca-certificates curl
+sudo apt-get install -y --no-install-recommends r-base r-base-dev python3-apt python3-dbus sudo ca-certificates curl
 
 if apt-cache show r-cran-bspm >/dev/null 2>&1; then
   sudo apt-get install -y r-cran-bspm
@@ -50,24 +50,49 @@ sudo usermod -aG sudo "$TARGET_USER"
 echo "$TARGET_USER ALL=(ALL) NOPASSWD:ALL" | sudo tee /etc/sudoers.d/99-${TARGET_USER}-r >/dev/null
 sudo chmod 0440 /etc/sudoers.d/99-${TARGET_USER}-r
 
+# User .Rprofile with HTTPUserAgent fix
 sudo install -d -m 0755 "$TARGET_HOME"
-sudo tee "$TARGET_HOME/.Rprofile" >/dev/null <<EOF
-options(repos = c(CRAN = "https://packagemanager.posit.co/cran/__linux__/${CODENAME}/latest"))
+sudo tee "$TARGET_HOME/.Rprofile" >/dev/null <<'EOF'
+# HTTPUserAgent is critical for bspm to work correctly
+options(
+  repos = c(CRAN = "https://packagemanager.posit.co/cran/__linux__/noble/latest"),
+  HTTPUserAgent = sprintf(
+    "R; R (%s %s %s %s)",
+    getRversion(),
+    R.version$platform,
+    R.version$arch,
+    R.version$os
+  ),
+  pkgType = "source"
+)
+
 if (requireNamespace("bspm", quietly = TRUE)) {
-  try(bspm::enable(), silent = TRUE)
+  suppressMessages(try(bspm::enable(), silent = TRUE))
   options(bspm.version.check = TRUE, bspm.sudo = TRUE)
 }
-options(pkgType = "source")
 EOF
 sudo chown "$TARGET_USER:$TARGET_USER" "$TARGET_HOME/.Rprofile"
 sudo chmod 0644 "$TARGET_HOME/.Rprofile"
 
+# Site-wide Rprofile with HTTPUserAgent fix
 sudo install -d -m 0755 /etc/R
-sudo tee /etc/R/Rprofile.site >/dev/null <<EOF
+sudo tee /etc/R/Rprofile.site >/dev/null <<'EOF'
 local({
-  options(repos = c(CRAN = "https://packagemanager.posit.co/cran/__linux__/${CODENAME}/latest"))
+  # HTTPUserAgent is critical for bspm to work correctly
+  options(
+    repos = c(CRAN = "https://packagemanager.posit.co/cran/__linux__/noble/latest"),
+    HTTPUserAgent = sprintf(
+      "R; R (%s %s %s %s)",
+      getRversion(),
+      R.version$platform,
+      R.version$arch,
+      R.version$os
+    ),
+    pkgType = "source"
+  )
+  
   if (requireNamespace("bspm", quietly = TRUE)) {
-    try(bspm::enable(), silent = TRUE)
+    suppressMessages(try(bspm::enable(), silent = TRUE))
     options(bspm.sudo = TRUE, bspm.version.check = TRUE)
   }
 })
@@ -75,4 +100,5 @@ EOF
 sudo chmod 0644 /etc/R/Rprofile.site
 
 echo "==> Done."
-echo "Use install.packages() normally. On amd64 you'll get r2u binaries; on ${ARCH} you'll get Ubuntu r-cran-* binaries when available, else source."
+echo "R is configured to install binary packages via bspm + r2u (${ARCH})."
+echo "Use install.packages() normally - packages will be installed as .deb files via apt."

@@ -2,6 +2,7 @@
 # container-scripts/install_vscode_r_setup.sh
 set -euo pipefail
 export DEBIAN_FRONTEND=noninteractive
+export HOME="${HOME:-/root}"  # Set HOME at the start
 
 TARGET_USER="$(id -un)"
 TARGET_HOME="$(getent passwd "$TARGET_USER" 2>/dev/null | cut -d: -f6 || echo "$HOME")"
@@ -20,8 +21,8 @@ apt-get update -qq
 apt-get install -y --no-install-recommends pipx python3-venv python3-pip
 
 # Ensure ~/.local/bin is in PATH permanently
-if ! grep -q '.local/bin' /root/.bashrc; then
-  echo 'export PATH="$HOME/.local/bin:$PATH"' >> /root/.bashrc
+if ! grep -q '.local/bin' "$TARGET_HOME/.bashrc" 2>/dev/null; then
+  echo 'export PATH="$HOME/.local/bin:$PATH"' >> "$TARGET_HOME/.bashrc"
 fi
 export PATH="$HOME/.local/bin:$PATH"
 

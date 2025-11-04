@@ -60,9 +60,14 @@ echo "[*] Python settings added to: $SETTINGS_FILE"
 echo "[*] Configuring Python keybindings..."
 KEYBINDINGS_FILE="$SETTINGS_DIR/keybindings.json"
 
-# Create keybindings file if it doesn't exist
+# Create keybindings file if it doesn't exist, or read existing
 if [ ! -f "$KEYBINDINGS_FILE" ]; then
   echo '[]' > "$KEYBINDINGS_FILE"
+fi
+
+# Check if file has valid JSON, if not recreate it
+if ! jq empty "$KEYBINDINGS_FILE" 2>/dev/null; then
+  echo "[] " > "$KEYBINDINGS_FILE"
 fi
 
 # Add Python keybindings
@@ -79,7 +84,6 @@ jq '. + [
     "when": "editorTextFocus && editorLangId == '\''python'\''"
   }
 ]' "$KEYBINDINGS_FILE" > "$TEMP_KEYBINDINGS" && mv "$TEMP_KEYBINDINGS" "$KEYBINDINGS_FILE"
-
 echo "[*] Python keybindings configured"
 
 echo ""

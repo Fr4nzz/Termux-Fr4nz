@@ -3,7 +3,7 @@ set -euo pipefail
 export DEBIAN_FRONTEND=noninteractive
 
 apt-get update -qq
-apt-get install -y -qq curl ca-certificates tar coreutils openssl jq
+apt-get install -y -qq curl ca-certificates tar coreutils jq
 
 # Detect arch
 arch="$(dpkg --print-architecture 2>/dev/null || uname -m)"
@@ -52,9 +52,9 @@ mkdir -p /root
 chown -R root:root /root
 
 # Helper scripts
-install -d -m 0755 /usr/local/bin /etc/code-server
+install -d -m 0755 /usr/local/bin
 
-# Local mode (HTTP on localhost - for webviews to work)
+# Single wrapper - HTTP on 0.0.0.0 (works for both local and LAN)
 tee /usr/local/bin/code-server-local >/dev/null <<'SCRIPT'
 #!/bin/sh
 set -e
@@ -62,16 +62,27 @@ PORT="${1:-13338}"
 export HOME="${HOME:-/root}"
 mkdir -p "$HOME/.code-server-data" "$HOME/.code-server-extensions"
 
-echo "========================================"
-echo "VS Code Server (LOCAL MODE)"
-echo "Local:  http://127.0.0.1:$PORT"
-echo "========================================"
-echo "✅ Webviews work (ChatGPT, Gemini, etc.)"
-echo "❌ Not accessible from other devices"
+LOCAL_IP=$(hostname -I | awk '{print $1}' 2>/dev/null || echo "N/A")
+
+echo "========================================="
+echo "VS Code Server"
+echo "========================================="
 echo ""
+echo "Access options:"
+echo "  1. Phone browser:  http://127.0.0.1:$PORT"
+echo "  2. Laptop via ADB: adb forward tcp:$PORT tcp:$PORT"
+echo "                     then http://127.0.0.1:$PORT"
+echo "  3. Laptop via LAN: http://$LOCAL_IP:$PORT"
+echo ""
+echo "ℹ️  For ChatGPT/Gemini to work:"
+echo "   - Use http://127.0.0.1:$PORT (options 1 or 2)"
+echo "   - Webviews don't work on LAN IP (option 3)"
+echo ""
+echo "Press Ctrl+C to stop"
+echo "========================================="
 
 exec /opt/code-server/bin/code-server \
-  --bind-addr "127.0.0.1:$PORT" \
+  --bind-addr "0.0.0.0:$PORT" \
   --auth none \
   --user-data-dir "$HOME/.code-server-data" \
   --extensions-dir "$HOME/.code-server-extensions" \
@@ -79,45 +90,6 @@ exec /opt/code-server/bin/code-server \
   --disable-update-check
 SCRIPT
 chmod 0755 /usr/local/bin/code-server-local
-
-# LAN mode (HTTPS with certificate - for laptop access)
-tee /usr/local/bin/code-server-lan >/dev/null <<'SCRIPT'
-#!/bin/sh
-set -e
-PORT="${1:-13338}"
-export HOME="${HOME:-/root}"
-mkdir -p "$HOME/.code-server-data" "$HOME/.code-server-extensions"
-
-# Check for certificates
-CERT_DIR="/etc/code-server"
-if [ ! -f "$CERT_DIR/cert.pem" ] || [ ! -f "$CERT_DIR/key.pem" ]; then
-  echo "❌ No certificate found. Run one of:"
-  echo "   setup-letsencrypt  (for real trusted cert)"
-  echo "   setup-localca      (for local self-signed CA)"
-  exit 1
-fi
-
-LOCAL_IP=$(hostname -I | awk '{print $1}')
-echo "========================================"
-echo "VS Code Server (LAN MODE)"
-echo "Local:  https://127.0.0.1:$PORT"
-echo "LAN:    https://$LOCAL_IP:$PORT"
-echo "========================================"
-echo "✅ Accessible from laptop/other devices"
-echo "⚠️  Requires trusted certificate for webviews"
-echo ""
-
-exec /opt/code-server/bin/code-server \
-  --bind-addr "0.0.0.0:$PORT" \
-  --cert "$CERT_DIR/cert.pem" \
-  --cert-key "$CERT_DIR/key.pem" \
-  --auth none \
-  --user-data-dir "$HOME/.code-server-data" \
-  --extensions-dir "$HOME/.code-server-extensions" \
-  --disable-telemetry \
-  --disable-update-check
-SCRIPT
-chmod 0755 /usr/local/bin/code-server-lan
 
 # Stop helper
 tee /usr/local/bin/code-server-stop >/dev/null <<'SCRIPT'
@@ -143,7 +115,12 @@ echo
 echo "✅ code-server installed"
 echo "✅ Microsoft marketplace enabled"
 echo ""
-echo "Modes:"
-echo "  code-server-local  # HTTP localhost (webviews work)"
-echo "  code-server-lan    # HTTPS LAN access (needs cert)"
+echo "Commands:"
+echo "  code-server-local  # Start server"
 echo "  code-server-stop   # Stop server"
+echo "  ext-install <id>   # Install extension"
+echo ""
+echo "Access methods:"
+echo "  Phone:         http://127.0.0.1:13338"
+echo "  Laptop (ADB):  adb forward tcp:13338 tcp:13338"
+echo "  Laptop (LAN):  http://<phone-ip>:13338"

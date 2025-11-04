@@ -54,11 +54,32 @@ chown -R root:root /root
 # Helper scripts
 install -d -m 0755 /usr/local/bin
 
-# Single wrapper - HTTP on 0.0.0.0 (works for both local and LAN)
+# Single wrapper with DPI support
 tee /usr/local/bin/code-server-local >/dev/null <<'SCRIPT'
 #!/bin/sh
 set -e
-PORT="${1:-13338}"
+
+# Parse arguments
+PORT="13338"
+DPI=""
+
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --dpi)
+      DPI="$2"
+      shift 2
+      ;;
+    --port)
+      PORT="$2"
+      shift 2
+      ;;
+    *)
+      PORT="$1"
+      shift
+      ;;
+  esac
+done
+
 export HOME="${HOME:-/root}"
 mkdir -p "$HOME/.code-server-data" "$HOME/.code-server-extensions"
 
@@ -74,12 +95,21 @@ echo "  2. Laptop via ADB: adb forward tcp:$PORT tcp:$PORT"
 echo "                     then http://127.0.0.1:$PORT"
 echo "  3. Laptop via LAN: http://$LOCAL_IP:$PORT"
 echo ""
+if [ -n "$DPI" ]; then
+  echo "📱 DPI override: $DPI (smaller UI for phone)"
+  echo ""
+fi
 echo "ℹ️  For ChatGPT/Gemini to work:"
 echo "   - Use http://127.0.0.1:$PORT (options 1 or 2)"
 echo "   - Webviews don't work on LAN IP (option 3)"
 echo ""
 echo "Press Ctrl+C to stop"
 echo "========================================="
+
+# Set DPI if specified (higher DPI = smaller UI)
+if [ -n "$DPI" ]; then
+  export VSCODE_FORCE_DPI="$DPI"
+fi
 
 exec /opt/code-server/bin/code-server \
   --bind-addr "0.0.0.0:$PORT" \
@@ -116,11 +146,44 @@ echo "✅ code-server installed"
 echo "✅ Microsoft marketplace enabled"
 echo ""
 echo "Commands:"
-echo "  code-server-local  # Start server"
-echo "  code-server-stop   # Stop server"
-echo "  ext-install <id>   # Install extension"
+echo "  code-server-local [PORT]           # Start server (default: 13338)"
+echo "  code-server-local --dpi DPI        # Start with custom DPI (e.g., 200 for smaller UI)"
+echo "  code-server-local --port PORT      # Specify port"
+echo "  code-server-stop                   # Stop server"
+echo "  ext-install <id>                   # Install extension"
+echo ""
+echo "DPI examples:"
+echo "  - Default (100): Normal size"
+echo "  - 150: Slightly smaller"
+echo "  - 200: Much smaller (recommended for phones)"
+echo "  - 250: Very compact"
+echo ""
+
+# Setup R environment
+echo "[*] Setting up R environment..."
+if curl -fsSL https://raw.githubusercontent.com/Fr4nzz/Termux-Fr4nz/refs/heads/main/container-scripts/install_vscode_r_setup.sh | bash; then
+  echo "✅ R environment configured"
+else
+  echo "⚠️  R setup failed or skipped"
+fi
+
+# Setup Python environment
+echo "[*] Setting up Python environment..."
+if curl -fsSL https://raw.githubusercontent.com/Fr4nzz/Termux-Fr4nz/refs/heads/main/container-scripts/install_vscode_python_setup.sh | bash; then
+  echo "✅ Python environment configured"
+else
+  echo "⚠️  Python setup failed or skipped"
+fi
+
+echo ""
+echo "========================================="
+echo "Setup complete!"
+echo "========================================="
 echo ""
 echo "Access methods:"
 echo "  Phone:         http://127.0.0.1:13338"
 echo "  Laptop (ADB):  adb forward tcp:13338 tcp:13338"
 echo "  Laptop (LAN):  http://<phone-ip>:13338"
+echo ""
+echo "Start with custom DPI:"
+echo "  code-server-local --dpi 200"

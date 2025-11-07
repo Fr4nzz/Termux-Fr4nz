@@ -154,3 +154,28 @@ SH
 chmod 0755 "$PREFIX/bin/ubuntu-proot-u"
 
 echo "✅ Rootless container ready. Enter with: ubuntu-proot"
+echo ""
+
+# Ask about Zsh installation
+INSTALL_ZSH=""
+if [ -t 0 ]; then
+  read -rp "Install Zsh + Oh My Zsh in container? [Y/n]: " INSTALL_ZSH </dev/tty || true
+  INSTALL_ZSH="${INSTALL_ZSH:-y}"
+else
+  INSTALL_ZSH="y"
+fi
+
+case "$INSTALL_ZSH" in
+  [Yy]*|"")
+    echo "[*] Installing Zsh in container..."
+    if curl -fsSL https://raw.githubusercontent.com/Fr4nzz/Termux-Fr4nz/refs/heads/main/container-scripts/install_zsh.sh \
+      | ubuntu-proot /bin/bash -s; then
+      echo "✅ Zsh installed in container"
+    else
+      echo "⚠️  Zsh installation failed or skipped"
+    fi
+    ;;
+  *)
+    echo "Skipping Zsh installation"
+    ;;
+esac

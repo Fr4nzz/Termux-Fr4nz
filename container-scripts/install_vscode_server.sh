@@ -54,6 +54,7 @@ chown -R root:root /root
 # Helper scripts
 install -d -m 0755 /usr/local/bin
 
+# HTTP server wrapper
 tee /usr/local/bin/code-server-local >/dev/null <<'SCRIPT'
 #!/bin/sh
 set -e
@@ -64,7 +65,7 @@ mkdir -p "$HOME/.code-server-data" "$HOME/.code-server-extensions"
 LOCAL_IP=$(hostname -I | awk '{print $1}' 2>/dev/null || echo "N/A")
 
 echo "========================================="
-echo "VS Code Server"
+echo "VS Code Server (HTTP)"
 echo "========================================="
 echo ""
 echo "Access: http://127.0.0.1:$PORT"
@@ -109,19 +110,14 @@ echo
 echo "✅ code-server installed"
 echo "✅ Microsoft marketplace enabled"
 echo ""
-echo "Commands:"
-echo "  code-server-local [PORT]           # Start server (default: 13338)"
-echo "  code-server-local --dpi DPI        # Start with custom DPI (e.g., 200 for smaller UI)"
-echo "  code-server-local --port PORT      # Specify port"
-echo "  code-server-stop                   # Stop server"
-echo "  ext-install <id>                   # Install extension"
-echo ""
-echo "DPI examples:"
-echo "  - Default (100): Normal size"
-echo "  - 150: Slightly smaller"
-echo "  - 200: Much smaller (recommended for phones)"
-echo "  - 250: Very compact"
-echo ""
+
+# Setup HTTPS
+echo "[*] Setting up HTTPS support..."
+if curl -fsSL https://raw.githubusercontent.com/Fr4nzz/Termux-Fr4nz/refs/heads/main/container-scripts/install_vscode_https.sh | bash; then
+  echo "✅ HTTPS configured"
+else
+  echo "⚠️  HTTPS setup failed or skipped"
+fi
 
 # Setup R environment
 echo "[*] Setting up R environment..."
@@ -144,10 +140,20 @@ echo "========================================="
 echo "Setup complete!"
 echo "========================================="
 echo ""
+echo "Commands:"
+echo "  code-server-local      # Start HTTP server"
+echo "  code-server-https      # Start HTTPS server (clipboard/webviews work!)"
+echo "  code-server-stop       # Stop server"
+echo "  cert-server            # Serve certificate for installation"
+echo "  ext-install <id>       # Install extension"
+echo ""
 echo "Access methods:"
 echo "  Phone:         http://127.0.0.1:13338"
 echo "  Laptop (ADB):  adb forward tcp:13338 tcp:13338"
 echo "  Laptop (LAN):  http://<phone-ip>:13338"
 echo ""
-echo "Start with custom DPI:"
-echo "  code-server-local --dpi 200"
+echo "For HTTPS (clipboard/webviews work):"
+echo "  1. Run: cert-server"
+echo "  2. Open: http://<phone-ip>:8889/setup"
+echo "  3. Follow installation instructions"
+echo "  4. Run: code-server-https"

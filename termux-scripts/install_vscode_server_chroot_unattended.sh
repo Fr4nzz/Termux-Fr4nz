@@ -2,7 +2,7 @@
 set -euo pipefail
 : "${PREFIX:=/data/data/com.termux/files/usr}"
 
-# Install code-server inside the chroot (includes R and Python setup)
+# Install code-server inside the chroot (includes R, Python, and HTTPS setup)
 curl -fsSL https://raw.githubusercontent.com/Fr4nzz/Termux-Fr4nz/refs/heads/main/container-scripts/install_vscode_server.sh \
   | ubuntu-chroot /bin/bash -s
 
@@ -25,7 +25,14 @@ mkdir -p /dev/pts /dev/shm /run
 sudo mountpoint -q /dev/pts || sudo mount -t devpts devpts /dev/pts
 sudo mountpoint -q /dev/shm || sudo mount -t tmpfs -o size=256M tmpfs /dev/shm
 
-exec code-server-local 13338
+# Check if HTTPS certificates exist
+if [ -f /opt/code-server-certs/cert.pem ]; then
+  exec code-server-https 13338
+else
+  echo "⚠️  HTTPS certificates not found, starting HTTP only"
+  echo "Run cert-server-chroot to set up HTTPS"
+  exec code-server-local 13338
+fi
 '
 SH
 chmod 0755 "$PREFIX/bin/vscode-server-chroot-start"
@@ -36,33 +43,69 @@ ubuntu-chroot 'code-server-stop'
 SH
 chmod 0755 "$PREFIX/bin/vscode-server-chroot-stop"
 
-echo "✅ VS Code Server installed with R and Python support"
-echo ""
-echo "Start: vscode-server-chroot-start"
-echo "Stop:  vscode-server-chroot-stop"
+cat >"$PREFIX/bin/cert-server-chroot" <<'SH'
+#!/data/data/com.termux/files/usr/bin/sh
+set -e
+
+exec ubuntu-chroot '
+export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+export HOME=/root
+
+exec cert-server 8889
+'
+SH
+chmod 0755 "$PREFIX/bin/cert-server-chroot"
+
+# Get phone IP for display
+PHONE_IP=$(termux-wifi-connectioninfo 2>/dev/null | grep -oP '(?<="ip":")[^"]*' || echo "YOUR-PHONE-IP")
+
+echo "✅ VS Code Server installed with R, Python, and HTTPS support"
 echo ""
 echo "========================================="
-echo "Access from:"
+echo "Quick Start:"
 echo "========================================="
 echo ""
-echo "📱 Phone browser:"
+echo "Start server:"
+echo "  vscode-server-chroot-start"
+echo ""
+echo "Stop server:"
+echo "  vscode-server-chroot-stop"
+echo ""
+echo "========================================="
+echo "Access Methods:"
+echo "========================================="
+echo ""
+echo "📱 Phone / Laptop (ADB):"
 echo "   http://127.0.0.1:13338"
-echo "   Use browser zoom (Ctrl+Plus/Minus) for UI size"
+echo "   (Run: adb forward tcp:13338 tcp:13338)"
+echo "   ✅ All features work via localhost"
 echo ""
-echo "💻 Laptop via ADB (recommended):"
-echo "   adb forward tcp:13338 tcp:13338"
-echo "   Then open: http://127.0.0.1:13338"
-echo "   ✅ ChatGPT/Gemini/Clipboard work!"
+echo "💻 Laptop (LAN) - HTTP:"
+echo "   http://$PHONE_IP:13338"
+echo "   ⚠️  Limited: webviews/clipboard don't work"
 echo ""
-echo "💻 Laptop via LAN:"
-echo "   http://\$(ip -4 addr show wlan0 2>/dev/null | awk '/inet /{print \$2}' | cut -d/ -f1):13338"
-echo "   ⚠️  Basic editing works, webviews/clipboard don't"
+echo "💻 Laptop (LAN) - HTTPS:"
+echo "   https://$PHONE_IP:13338"
+echo "   ✅ Full features! (requires certificate setup)"
 echo ""
+echo "========================================="
+echo "First Time HTTPS Setup (one-time):"
+echo "========================================="
+echo ""
+echo "1. Run: cert-server-chroot"
+echo "2. Open on laptop: http://$PHONE_IP:8889/setup"
+echo "3. Follow installation instructions"
+echo "4. Restart vscode-server-chroot-start"
+echo "5. Access: https://$PHONE_IP:13338"
+echo ""
+echo "========================================="
 echo "Languages configured:"
-echo "  - R (radian console, httpgd plots, Shiny apps with F5)"
+echo "========================================="
+echo ""
+echo "  - R (radian console, httpgd plots, Shiny with F5)"
 echo "  - Python (Ctrl+Enter to run code)"
 echo ""
 echo "💡 Tips:"
-echo "  - For smaller UI on phone: Use browser zoom (3-finger pinch or Ctrl+-)"
-echo "  - Python terminal: Open a .py file, Ctrl+Enter will create terminal"
-echo "  - R terminal: Open Command Palette (Ctrl+Shift+P) → 'R: Create R Terminal'"
+echo "  - Browser zoom: Ctrl+/- or pinch gesture"
+echo "  - Python terminal: Open .py → Ctrl+Enter"
+echo "  - R terminal: Ctrl+Shift+P → 'R: Create R Terminal'"

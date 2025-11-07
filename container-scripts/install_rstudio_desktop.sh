@@ -42,7 +42,7 @@ DEB_URL="${BASE}/rstudio-latest-${PLATFORM}.deb"
 
 tmpdeb="$(mktemp /tmp/rstudio-XXXXXX.deb)"
 echo "[*] Downloading latest RStudio Desktop (${CHANNEL}, ${PLATFORM}) via redirect: ${DEB_URL}"
-curl -fsSL -L "$DEB_URL" -o "$tmpdeb"
+curl -fL "$DEB_URL" -o "$tmpdeb"
 
 # Optional: show what we got
 echo "[*] Saved to $tmpdeb ($(du -h "$tmpdeb" | awk '{print $1}'))"

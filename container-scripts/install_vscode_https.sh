@@ -225,7 +225,7 @@ PHONE_IP="YOUR_PHONE_IP"
 CERT_URL="http://$PHONE_IP:8889/rootCA.pem"
 
 echo "Downloading certificate..."
-curl -fsSL "$CERT_URL" -o /tmp/mkcert-rootCA.pem
+curl -fL "$CERT_URL" -o /tmp/mkcert-rootCA.pem
 
 echo "Installing certificate (requires sudo)..."
 sudo security add-trusted-cert -d -r trustRoot -k /Library/Keychains/System.keychain /tmp/mkcert-rootCA.pem

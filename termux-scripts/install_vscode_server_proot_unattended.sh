@@ -4,8 +4,9 @@ set -eu
 : "${PREFIX:=/data/data/com.termux/files/usr}"
 
 # Install code-server inside the container (includes R, Python, and HTTPS setup)
+# Now uses default shell (zsh if installed, bash otherwise)
 curl -fsSL https://raw.githubusercontent.com/Fr4nzz/Termux-Fr4nz/refs/heads/main/container-scripts/install_vscode_server.sh \
-  | ubuntu-proot /bin/bash -s
+  | ubuntu-proot
 
 # Termux wrappers
 mkdir -p "$PREFIX/bin" "$PREFIX/var/run"
@@ -33,8 +34,8 @@ else
   PROTOCOL="http"
 fi
 
-# Start server in background
-ubuntu-proot /bin/bash -lc "$LAUNCHER" > /dev/null 2>&1 &
+# Start server in background using default shell with login
+ubuntu-proot /bin/sh -c "exec \$(getent passwd root | cut -d: -f7) -lc '$LAUNCHER'" > /dev/null 2>&1 &
 
 echo $! >"$PIDFILE"
 
@@ -87,7 +88,8 @@ cat >"$PREFIX/bin/cert-server-proot" <<'SH'
 #!/data/data/com.termux/files/usr/bin/sh
 set -e
 
-exec ubuntu-proot /bin/bash -lc 'cert-server 8889'
+# Use default shell with login
+exec ubuntu-proot /bin/sh -c "exec \$(getent passwd root | cut -d: -f7) -lc 'cert-server 8889'"
 SH
 chmod 0755 "$PREFIX/bin/cert-server-proot"
 

@@ -10,13 +10,20 @@ if [ -z "$U" ]; then
   U="${U:-legend}"
 fi
 
+# Ask about Zsh installation immediately after username
+INSTALL_ZSH="${INSTALL_ZSH:-}"
+if [ -z "$INSTALL_ZSH" ]; then
+  read -rp "Install Zsh + Oh My Zsh in container? [Y/n]: " INSTALL_ZSH </dev/tty || true
+  INSTALL_ZSH="${INSTALL_ZSH:-Y}"
+fi
+
 pkg update -y >/dev/null || true
 
 # --- Install Daijin first (its install can break rurima binaries) ---
 if [ ! -x "$PREFIX/share/daijin/proot_start.sh" ]; then
   tmpdeb="$PREFIX/tmp/daijin-aarch64.deb"
   mkdir -p "$PREFIX/tmp"
-  curl -fsSL -o "$tmpdeb" \
+  curl -fL -o "$tmpdeb" \
     https://github.com/RuriOSS/daijin/releases/download/daijin-v1.5-rc1/daijin-aarch64.deb
   (apt install -y "$tmpdeb" 2>/dev/null) || (dpkg -i "$tmpdeb" || true; apt -f install -y)
   rm -f "$tmpdeb"
@@ -124,16 +131,32 @@ if [ "$#" -eq 0 ]; then
   exec "$PROOT" -r "$C" -e "$BIND" $ENV_SETUP /bin/su - "$U"
 fi
 
-# Piped/redirected input → run shell reading from stdin
+# Piped/redirected input → run default shell reading from stdin
 if [ ! -t 0 ]; then
-  # Determine which shell to use
-  SHELL_BIN="/bin/bash"
+  # Allow user to specify shell, otherwise use default from /etc/passwd
+  SHELL_BIN=""
+  
+  # Check if first argument is a shell specification
   case "$1" in
-    /bin/sh|sh) SHELL_BIN="/bin/sh"; shift ;;
-    /bin/bash|bash) SHELL_BIN="/bin/bash"; shift ;;
+    /bin/sh|sh|/bin/bash|bash|/bin/zsh|zsh)
+      case "$1" in
+        /bin/sh|sh) SHELL_BIN="/bin/sh" ;;
+        /bin/bash|bash) SHELL_BIN="/bin/bash" ;;
+        /bin/zsh|zsh) SHELL_BIN="/bin/zsh" ;;
+      esac
+      shift
+      ;;
   esac
   
-  # Handle -s flag (read from stdin)
+  # If no shell specified, get default shell for user
+  if [ -z "$SHELL_BIN" ]; then
+    # Get default shell from container's /etc/passwd
+    SHELL_BIN=$("$PROOT" -r "$C" -e "$BIND" $ENV_SETUP /bin/sh -c "getent passwd $U | cut -d: -f7")
+    # Fallback to /bin/sh if empty
+    [ -z "$SHELL_BIN" ] && SHELL_BIN="/bin/sh"
+  fi
+  
+  # Handle -s flag (read from stdin) - consume it if present
   if [ "$1" = "-s" ]; then
     shift
   fi
@@ -156,20 +179,12 @@ chmod 0755 "$PREFIX/bin/ubuntu-proot-u"
 echo "✅ Rootless container ready. Enter with: ubuntu-proot"
 echo ""
 
-# Ask about Zsh installation
-INSTALL_ZSH=""
-if [ -t 0 ]; then
-  read -rp "Install Zsh + Oh My Zsh in container? [Y/n]: " INSTALL_ZSH </dev/tty || true
-  INSTALL_ZSH="${INSTALL_ZSH:-y}"
-else
-  INSTALL_ZSH="y"
-fi
-
+# Install Zsh based on earlier answer
 case "$INSTALL_ZSH" in
   [Yy]*|"")
     echo "[*] Installing Zsh in container..."
     if curl -fsSL https://raw.githubusercontent.com/Fr4nzz/Termux-Fr4nz/refs/heads/main/container-scripts/install_zsh.sh \
-      | ubuntu-proot /bin/bash -s; then
+      | ubuntu-proot; then
       echo "✅ Zsh installed in container"
     else
       echo "⚠️  Zsh installation failed or skipped"

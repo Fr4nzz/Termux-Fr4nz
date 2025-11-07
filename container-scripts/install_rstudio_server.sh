@@ -41,7 +41,7 @@ DEB_URL="${BASE}/rstudio-server-latest-${PLATFORM}.deb"  # 302 → current build
 TMP_DEB="$(mktemp --suffix=.deb)"
 
 echo "[*] Downloading ${DEB_URL}"
-curl -fsSL -L "$DEB_URL" -o "$TMP_DEB"
+curl -fL "$DEB_URL" -o "$TMP_DEB"
 
 # ----------------------------------------------
 # 3) Install server (gdebi with fallback)

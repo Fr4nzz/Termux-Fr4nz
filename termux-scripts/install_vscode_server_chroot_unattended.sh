@@ -3,8 +3,9 @@ set -euo pipefail
 : "${PREFIX:=/data/data/com.termux/files/usr}"
 
 # Install code-server inside the chroot (includes R, Python, and HTTPS setup)
+# Now uses default shell (zsh if installed, bash otherwise)
 curl -fsSL https://raw.githubusercontent.com/Fr4nzz/Termux-Fr4nz/refs/heads/main/container-scripts/install_vscode_server.sh \
-  | ubuntu-chroot /bin/bash -s
+  | ubuntu-chroot
 
 # Create Termux wrappers
 mkdir -p "$PREFIX/bin"
@@ -13,7 +14,11 @@ cat >"$PREFIX/bin/vscode-server-chroot-start" <<'SH'
 #!/data/data/com.termux/files/usr/bin/sh
 set -e
 
-exec ubuntu-chroot '
+# Get default shell for root
+DEFAULT_SHELL=$(ubuntu-chroot /bin/sh -c "getent passwd root | cut -d: -f7")
+[ -z "$DEFAULT_SHELL" ] && DEFAULT_SHELL="/bin/bash"
+
+exec ubuntu-chroot "$DEFAULT_SHELL" -lc '
 export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 export HOME=/root
 
@@ -47,7 +52,11 @@ cat >"$PREFIX/bin/cert-server-chroot" <<'SH'
 #!/data/data/com.termux/files/usr/bin/sh
 set -e
 
-exec ubuntu-chroot '
+# Get default shell for root
+DEFAULT_SHELL=$(ubuntu-chroot /bin/sh -c "getent passwd root | cut -d: -f7")
+[ -z "$DEFAULT_SHELL" ] && DEFAULT_SHELL="/bin/bash"
+
+exec ubuntu-chroot "$DEFAULT_SHELL" -lc '
 export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 export HOME=/root
 

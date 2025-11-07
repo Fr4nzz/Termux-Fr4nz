@@ -21,16 +21,22 @@ Scripts for setting up Termux and running Linux containers with development envi
 ### SSH Access (Optional)
 
 Enable SSH to run commands from your computer. See [WINDOWS_SSH.md](./Instructions/WINDOWS_SSH.md).
+
+**Install:**
 ```bash
 curl -fsSL https://raw.githubusercontent.com/Fr4nzz/Termux-Fr4nz/refs/heads/main/termux-scripts/setup_ssh.sh | bash
+```
 
-# Set password
+**Set password:**
+```bash
 passwd
 ```
 
 ### Zsh with Oh My Zsh (Recommended)
 
 Better terminal with autosuggestions and syntax highlighting.
+
+**Install:**
 ```bash
 curl -fsSL https://raw.githubusercontent.com/Fr4nzz/Termux-Fr4nz/refs/heads/main/termux-scripts/install_zsh.sh | bash
 ```
@@ -49,18 +55,28 @@ termux-setup-storage
 Choose **one** container type. Default username is `legend` (customize with `export DESKTOP_USER=name` before running).
 
 ### Rooted Container (Recommended if rooted)
+
+**Install:**
 ```bash
 curl -fsSL https://raw.githubusercontent.com/Fr4nzz/Termux-Fr4nz/refs/heads/main/termux-scripts/setup_rooted_container_unattended.sh | bash
 ```
 
-Enter with: `ubuntu-chroot`
+**Enter container:**
+```bash
+ubuntu-chroot
+```
 
 ### Rootless Container (No root required)
+
+**Install:**
 ```bash
 curl -fsSL https://raw.githubusercontent.com/Fr4nzz/Termux-Fr4nz/refs/heads/main/termux-scripts/setup_rootless_container_unattended.sh | bash
 ```
 
-Enter with: `ubuntu-proot`
+**Enter container:**
+```bash
+ubuntu-proot
+```
 
 > **Note:** Both scripts prompt to install Zsh in the container (default: yes).
 
@@ -80,75 +96,116 @@ Full-featured VS Code in browser with R and Python support.
 - ✅ HTTPS support (clipboard/webviews work over LAN)
 
 #### Rootless (proot)
+
+**Install:**
 ```bash
 curl -fsSL https://raw.githubusercontent.com/Fr4nzz/Termux-Fr4nz/refs/heads/main/termux-scripts/install_vscode_server_proot_unattended.sh | bash
+```
 
-# Start server
-vscode-server-proot-start
+**Usage:**
+```bash
+vscode-server-proot-start  # Start server
+vscode-server-proot-stop   # Stop server
+```
 
-# Access
-📱 Phone: http://127.0.0.1:13338
-💻 Laptop (ADB): adb forward tcp:13338 tcp:13338
-                 http://127.0.0.1:13338
-💻 Laptop (LAN): https://YOUR-PHONE-IP:13338 (requires certificate setup)
+**Access:**
+- 📱 Phone: `http://127.0.0.1:13338`
+- 💻 Laptop (ADB): Run `adb forward tcp:13338 tcp:13338`, then open `http://127.0.0.1:13338`
+- 💻 Laptop (LAN): `https://YOUR-PHONE-IP:13338` (requires certificate setup)
 
-# Stop server
-vscode-server-proot-stop
-
-# HTTPS setup (one-time, for LAN access with clipboard/webviews)
+**HTTPS Setup (one-time, for LAN access with clipboard/webviews):**
+```bash
 cert-server-proot
 # Open http://YOUR-PHONE-IP:8889/setup on laptop and follow instructions
 ```
 
 #### Rooted (chroot)
+
+**Install:**
 ```bash
 curl -fsSL https://raw.githubusercontent.com/Fr4nzz/Termux-Fr4nz/refs/heads/main/termux-scripts/install_vscode_server_chroot_unattended.sh | bash
+```
 
-# Commands
-vscode-server-chroot-start  # Start (http://127.0.0.1:13338)
-vscode-server-chroot-stop   # Stop
-cert-server-chroot          # HTTPS certificate setup
+**Usage:**
+```bash
+vscode-server-chroot-start  # Start server
+vscode-server-chroot-stop   # Stop server
+```
+
+**Access:** `http://127.0.0.1:13338`
+
+**HTTPS Setup:**
+```bash
+cert-server-chroot
 ```
 
 ### VSCodium Server
 
-Open-source VS Code server (telemetry-free). Runs on `http://127.0.0.1:13337`.
+Open-source VS Code server (telemetry-free).
 
 #### Rootless
+
+**Install:**
 ```bash
 curl -fsSL https://raw.githubusercontent.com/Fr4nzz/Termux-Fr4nz/refs/heads/main/termux-scripts/install_vscodium_server_proot_unattended.sh | bash
-
-vscodium-server-proot-start  # Start
-vscodium-server-proot-stop   # Stop
 ```
+
+**Usage:**
+```bash
+vscodium-server-proot-start  # Start server
+vscodium-server-proot-stop   # Stop server
+```
+
+**Access:** `http://127.0.0.1:13337`
 
 #### Rooted
+
+**Install:**
 ```bash
 curl -fsSL https://raw.githubusercontent.com/Fr4nzz/Termux-Fr4nz/refs/heads/main/termux-scripts/install_vscodium_server_chroot_unattended.sh | bash
-
-vscodium-server-chroot-start  # Start
-vscodium-server-chroot-stop   # Stop
 ```
+
+**Usage:**
+```bash
+vscodium-server-chroot-start  # Start server
+vscodium-server-chroot-stop   # Stop server
+```
+
+**Access:** `http://127.0.0.1:13337`
 
 ### RStudio Server
 
-R statistical computing IDE. Runs on `http://127.0.0.1:8787`.
+R statistical computing IDE.
 
 #### Rootless
+
+**Install:**
 ```bash
 curl -fsSL https://raw.githubusercontent.com/Fr4nzz/Termux-Fr4nz/refs/heads/main/termux-scripts/install_rstudio_server_proot_unattended.sh | bash
-
-rstudio-proot-start  # Start
-rstudio-proot-stop   # Stop
 ```
+
+**Usage:**
+```bash
+rstudio-proot-start  # Start server
+rstudio-proot-stop   # Stop server
+```
+
+**Access:** `http://127.0.0.1:8787`
 
 #### Rooted
+
+**Install:**
 ```bash
 curl -fsSL https://raw.githubusercontent.com/Fr4nzz/Termux-Fr4nz/refs/heads/main/termux-scripts/install_rstudio_server_chroot_unattended.sh | bash
-
-rstudio-chroot-start  # Start
-rstudio-chroot-stop   # Stop
 ```
+
+**Usage:**
+```bash
+rstudio-chroot-start  # Start server
+rstudio-chroot-stop   # Stop server
+```
+
+**Access:** `http://127.0.0.1:8787`
 
 ---
 
@@ -157,11 +214,15 @@ rstudio-chroot-stop   # Stop
 Full XFCE desktop via Termux:X11.
 
 ### Rootless
+
+**Install:**
 ```bash
 curl -fsSL https://raw.githubusercontent.com/Fr4nzz/Termux-Fr4nz/refs/heads/main/termux-scripts/install_x11_desktop_rootless_unattended.sh | bash
 ```
 
 ### Rooted
+
+**Install:**
 ```bash
 curl -fsSL https://raw.githubusercontent.com/Fr4nzz/Termux-Fr4nz/refs/heads/main/termux-scripts/install_x11_desktop_root_unattended.sh | bash
 ```
@@ -173,37 +234,58 @@ curl -fsSL https://raw.githubusercontent.com/Fr4nzz/Termux-Fr4nz/refs/heads/main
 Run these **inside the container** (`ubuntu-proot` or `ubuntu-chroot`).
 
 ### Firefox
+
+**Install:**
 ```bash
 curl -fsSL https://raw.githubusercontent.com/Fr4nzz/Termux-Fr4nz/refs/heads/main/container-scripts/install_firefox.sh | bash
 ```
 
 ### VS Code (Desktop)
+
+**Install:**
 ```bash
 curl -fsSL https://raw.githubusercontent.com/Fr4nzz/Termux-Fr4nz/refs/heads/main/container-scripts/install_vscode.sh | bash
 ```
 
-Launch: `code-proot`
+**Launch:**
+```bash
+code-proot
+```
 
 ### VSCodium (Desktop)
+
+**Install:**
 ```bash
 curl -fsSL https://raw.githubusercontent.com/Fr4nzz/Termux-Fr4nz/refs/heads/main/container-scripts/install_vscodium.sh | bash
 ```
 
-Launch: `codium-proot`
+**Launch:**
+```bash
+codium-proot
+```
 
 ### RStudio Desktop
+
+**Install:**
 ```bash
 curl -fsSL https://raw.githubusercontent.com/Fr4nzz/Termux-Fr4nz/refs/heads/main/container-scripts/install_rstudio_desktop.sh | bash
 ```
 
-Launch: `rstudio-proot`
+**Launch:**
+```bash
+rstudio-proot
+```
 
 ### Package Manager (Synaptic)
+
+**Install:**
 ```bash
 curl -fsSL https://raw.githubusercontent.com/Fr4nzz/Termux-Fr4nz/refs/heads/main/container-scripts/install_app_manager.sh | bash
 ```
 
 ### Desktop Icons Helper
+
+**Install:**
 ```bash
 curl -fsSL https://raw.githubusercontent.com/Fr4nzz/Termux-Fr4nz/refs/heads/main/container-scripts/install_desktopify.sh | bash
 ```
@@ -213,40 +295,53 @@ curl -fsSL https://raw.githubusercontent.com/Fr4nzz/Termux-Fr4nz/refs/heads/main
 ## Additional Tools
 
 ### R with Binary Packages (bspm + r2u)
+
+**Install (inside container):**
 ```bash
-# Inside container
 curl -fsSL https://raw.githubusercontent.com/Fr4nzz/Termux-Fr4nz/refs/heads/main/container-scripts/install_r_binaries.sh | bash
 ```
 
 ### Zsh in Container
+
+**Install (inside container):**
 ```bash
-# Inside container (also prompted during container setup)
 curl -fsSL https://raw.githubusercontent.com/Fr4nzz/Termux-Fr4nz/refs/heads/main/container-scripts/install_zsh.sh | bash
 ```
+
+> **Note:** Also prompted during container setup.
 
 ---
 
 ## Troubleshooting
 
 ### Repair APT
+
+**Run inside container:**
 ```bash
-# Inside container
 curl -fsSL https://raw.githubusercontent.com/Fr4nzz/Termux-Fr4nz/refs/heads/main/container-scripts/apt_heal.sh | bash
 ```
 
 ### Keep Termux Running
 
-Prevent Android from killing Termux during long tasks:
-```bash
-# In Termux
-termux-wake-lock    # Acquire wakelock
-termux-wake-unlock  # Release when done
+Prevent Android from killing Termux during long tasks.
 
-# Or whitelist via ADB (from computer)
+**Acquire wakelock:**
+```bash
+termux-wake-lock
+```
+
+**Release wakelock:**
+```bash
+termux-wake-unlock
+```
+
+**Whitelist via ADB (from computer):**
+```bash
 adb shell cmd deviceidle whitelist +com.termux
 ```
 
 ### Browse Available Images
+
 ```bash
 rurima lxc list
 ```

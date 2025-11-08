@@ -63,12 +63,7 @@ cat > /root/.code-server-data/User/settings.json <<'SETTINGS'
       "icon": "terminal-bash"
     }
   },
-  "terminal.integrated.inheritEnv": false,
-  "extensions.autoUpdate": false,
-  "extensions.autoCheckUpdates": false,
-  "update.mode": "none",
-  "telemetry.telemetryLevel": "off",
-  "workbench.enableExperiments": false
+  "terminal.integrated.inheritEnv": false
 }
 SETTINGS
 
@@ -107,8 +102,7 @@ exec /opt/code-server/bin/code-server \
   --user-data-dir "$HOME/.code-server-data" \
   --extensions-dir "$HOME/.code-server-extensions" \
   --disable-telemetry \
-  --disable-update-check \
-  --disable-workspace-trust
+  --disable-update-check
 SCRIPT
 chmod 0755 /usr/local/bin/code-server-local
 

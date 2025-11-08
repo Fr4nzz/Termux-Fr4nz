@@ -106,8 +106,7 @@ if [ "$USE_HTTPS" = "true" ]; then
     --user-data-dir "$HOME/.code-server-data" \
     --extensions-dir "$HOME/.code-server-extensions" \
     --disable-telemetry \
-    --disable-update-check \
-    --disable-workspace-trust
+    --disable-update-check
 else
   echo "========================================="
   echo "VS Code Server (HTTP)"
@@ -128,8 +127,7 @@ else
     --user-data-dir "$HOME/.code-server-data" \
     --extensions-dir "$HOME/.code-server-extensions" \
     --disable-telemetry \
-    --disable-update-check \
-    --disable-workspace-trust
+    --disable-update-check
 fi
 SCRIPT
 chmod 0755 /usr/local/bin/code-server-https

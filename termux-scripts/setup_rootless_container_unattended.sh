@@ -96,6 +96,8 @@ echo "$U ALL=(ALL) NOPASSWD: ALL" > /etc/sudoers.d/99-$U
 /bin/chmod 0440 /etc/sudoers.d/99-$U
 /usr/bin/install -d -m0755 /etc/ruri
 printf '%s\n' "$U" > /etc/ruri/user
+# Mark runtime so R setup can pick proot path
+printf '%s\n' proot > /etc/ruri/runtime
 /usr/bin/install -d -m0700 -o "$U" -g "$U" /home/"$U"/.run
 echo 'export TERM=xterm-256color' >> /root/.bashrc
 /bin/su - "$U" -c "echo 'export TERM=xterm-256color' >> ~/.bashrc"

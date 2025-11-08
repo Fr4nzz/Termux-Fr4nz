@@ -54,9 +54,9 @@ if [ -n "$TARGET_USER" ] && [ "$TARGET_USER" != "root" ]; then
   say "4.5/4" "Also setting up zsh for user $TARGET_USER..."
   
   TARGET_HOME=$(getent passwd "$TARGET_USER" | cut -d: -f6)
-  
-  # Install OMZ for user
-  sudo -u "$TARGET_USER" -H sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" "" --unattended
+
+  # Install OMZ for user (explicitly set HOME, RUNZSH, CHSH)
+  sudo -u "$TARGET_USER" HOME="$TARGET_HOME" RUNZSH=no CHSH=no sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" "" --unattended
   
   # Install plugins for user
   ZSH_CUSTOM="$TARGET_HOME/.oh-my-zsh/custom"

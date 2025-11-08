@@ -18,7 +18,7 @@ if [ -z "$INSTALL_ZSH" ]; then
 fi
 
 pkg update -y >/dev/null || true
-pkg install -y tsu >/dev/null
+pkg install -y tsu python >/dev/null
 
 # Ensure rurima is present (rooted uses rurima, but daijin is not needed here)
 if ! command -v rurima >/dev/null 2>&1; then
@@ -39,7 +39,7 @@ sudo rurima r "$C" /bin/bash -lc '
   set -e
   export DEBIAN_FRONTEND=noninteractive
   apt-get update -y
-  apt-get install -y curl ca-certificates gnupg wget
+  apt-get install -y curl ca-certificates gnupg wget python3
 '
 
 # Maintainer helpers (no --reinstall; just ensure present)
@@ -53,6 +53,22 @@ sudo rurima r "$C" /bin/bash -lc '
     sgml-base xml-core
   dpkg --configure -a || true
   apt-get -o Dpkg::Options::="--force-confnew" -f install
+'
+
+# myip helper inside the chroot container (no root needed)
+sudo rurima r "$C" /bin/bash -lc '
+set -e
+cat >/usr/local/bin/myip <<'"'"'PYSH'"'"'
+#!/bin/sh
+python3 - <<'PY'
+import socket
+s=socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+s.connect(("1.1.1.1",80))
+print(s.getsockname()[0])
+s.close()
+PY
+PYSH
+chmod 0755 /usr/local/bin/myip
 '
 
 # User + sudoers + remember + XDG runtime + runtime tag
@@ -84,6 +100,19 @@ sudo rurima r "$C" /bin/bash -lc "
 # Termux → chroot wrappers
 TP="$PREFIX/tmp/.X11-unix"
 mkdir -p "$TP" "$PREFIX/bin"
+
+# Host-side helper: phone-ip (no root needed)
+cat >"$PREFIX/bin/phone-ip" <<'SH'
+#!/data/data/com.termux/files/usr/bin/sh
+python3 - <<'PY'
+import socket
+s=socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+s.connect(("1.1.1.1",80))
+print(s.getsockname()[0])
+s.close()
+PY
+SH
+chmod 0755 "$PREFIX/bin/phone-ip"
 
 cat >"$PREFIX/bin/ubuntu-chroot" <<'SH'
 #!/data/data/com.termux/files/usr/bin/sh

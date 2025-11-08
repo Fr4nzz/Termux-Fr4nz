@@ -66,7 +66,7 @@ SH
 chmod 0755 "$PREFIX/bin/cert-server-chroot"
 
 # Get phone IP for display
-PHONE_IP=$(termux-wifi-connectioninfo 2>/dev/null | grep -oP '(?<="ip":")[^"]*' || echo "YOUR-PHONE-IP")
+PHONE_IP="$(phone-ip)"
 
 echo "✅ VS Code Server installed with R, Python, and HTTPS support"
 echo ""

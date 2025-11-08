@@ -25,10 +25,7 @@ Enable SSH to run commands from your computer. See [WINDOWS_SSH.md](./Instructio
 **Install:**
 ```bash
 curl -fsSL https://raw.githubusercontent.com/Fr4nzz/Termux-Fr4nz/refs/heads/main/termux-scripts/setup_ssh.sh | bash
-```
-
-**Set password:**
-```bash
+# Set password
 passwd
 ```
 
@@ -139,39 +136,6 @@ vscode-server-chroot-stop   # Stop server
 cert-server-chroot
 ```
 
-### VSCodium Server
-
-Open-source VS Code server (telemetry-free).
-
-#### Rootless
-
-**Install:**
-```bash
-curl -fsSL https://raw.githubusercontent.com/Fr4nzz/Termux-Fr4nz/refs/heads/main/termux-scripts/install_vscodium_server_proot_unattended.sh | bash
-```
-
-**Usage:**
-```bash
-vscodium-server-proot-start  # Start server
-vscodium-server-proot-stop   # Stop server
-```
-
-**Access:** `http://127.0.0.1:13337`
-
-#### Rooted
-
-**Install:**
-```bash
-curl -fsSL https://raw.githubusercontent.com/Fr4nzz/Termux-Fr4nz/refs/heads/main/termux-scripts/install_vscodium_server_chroot_unattended.sh | bash
-```
-
-**Usage:**
-```bash
-vscodium-server-chroot-start  # Start server
-vscodium-server-chroot-stop   # Stop server
-```
-
-**Access:** `http://127.0.0.1:13337`
 
 ### RStudio Server
 
@@ -252,17 +216,6 @@ curl -fsSL https://raw.githubusercontent.com/Fr4nzz/Termux-Fr4nz/refs/heads/main
 code-proot
 ```
 
-### VSCodium (Desktop)
-
-**Install:**
-```bash
-curl -fsSL https://raw.githubusercontent.com/Fr4nzz/Termux-Fr4nz/refs/heads/main/container-scripts/install_vscodium.sh | bash
-```
-
-**Launch:**
-```bash
-codium-proot
-```
 
 ### RStudio Desktop
 

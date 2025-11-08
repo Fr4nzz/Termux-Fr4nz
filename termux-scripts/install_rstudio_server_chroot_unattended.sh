@@ -37,7 +37,7 @@ INNER
 
 echo $! >"$PIDFILE"
 
-PHONE_IP="$(sudo ip -4 addr show wlan0 2>/dev/null | awk '/inet /{print $2}' | cut -d/ -f1)"
+PHONE_IP="$(phone-ip)"
 echo "RStudio Server (chroot) on http://127.0.0.1:8787"
 [ -n "$PHONE_IP" ] && echo "LAN: http://$PHONE_IP:8787"
 echo "Stop with: rstudio-chroot-stop"

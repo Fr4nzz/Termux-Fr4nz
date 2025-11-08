@@ -150,7 +150,12 @@ U="root"
 if [ "$1" = "--user" ]; then
   U="$2"
   shift 2
+  # --user only supported for interactive mode
+  [ "$#" -gt 0 ] && echo "Warning: --user only works for interactive mode, ignoring for commands" >&2 && U="root"
 fi
+
+# Clear problematic environment variables that might leak from Termux
+unset SHELL ZDOTDIR ZSH OH_MY_ZSH
 
 PROOT="$PREFIX/share/daijin/proot_start.sh"
 BIND="-b $TP:/tmp/.X11-unix -b /sdcard:/mnt/sdcard"
@@ -164,7 +169,6 @@ if [ ! -t 0 ]; then
 fi
 
 # Command - set environment then execute
-# Set PATH via env command to ensure it's available
 exec "$PROOT" -r "$C" -e "$BIND" /usr/bin/env PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin HOME=/root "$@"
 SH
 chmod 0755 "$PREFIX/bin/ubuntu-proot"

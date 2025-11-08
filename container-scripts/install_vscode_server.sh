@@ -3,7 +3,7 @@ set -euo pipefail
 export DEBIAN_FRONTEND=noninteractive
 
 apt-get update -qq
-apt-get install -y -qq curl ca-certificates tar coreutils jq
+apt-get install -y -qq curl ca-certificates tar coreutils jq python3
 
 # Detect arch
 arch="$(dpkg --print-architecture 2>/dev/null || uname -m)"
@@ -62,7 +62,14 @@ PORT="${1:-13338}"
 export HOME="${HOME:-/root}"
 mkdir -p "$HOME/.code-server-data" "$HOME/.code-server-extensions"
 
-LOCAL_IP=$(hostname -I | awk '{print $1}' 2>/dev/null || echo "N/A")
+LOCAL_IP=$(python3 - <<'PY'
+import socket
+s=socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+s.connect(("1.1.1.1",80))
+print(s.getsockname()[0])
+s.close()
+PY
+)
 
 echo "========================================="
 echo "VS Code Server (HTTP)"

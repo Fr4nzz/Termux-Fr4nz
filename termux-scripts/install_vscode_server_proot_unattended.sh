@@ -40,7 +40,7 @@ ubuntu-proot /bin/sh -c "exec \$(getent passwd root | cut -d: -f7) -lc '$LAUNCHE
 echo $! >"$PIDFILE"
 
 # Detect phone IP
-PHONE_IP="$(ip -4 addr show wlan0 2>/dev/null | awk '/inet / {print $2}' | cut -d/ -f1 || echo "YOUR-PHONE-IP")"
+PHONE_IP="$(phone-ip)"
 
 echo "========================================="
 echo "VS Code Server (proot)"
@@ -94,7 +94,7 @@ SH
 chmod 0755 "$PREFIX/bin/cert-server-proot"
 
 # Get phone IP for display
-PHONE_IP=$(ip -4 addr show wlan0 2>/dev/null | awk '/inet / {print $2}' | cut -d/ -f1 || echo "YOUR-PHONE-IP")
+PHONE_IP="$(phone-ip)"
 
 echo "✅ VS Code Server (proot) installed with R, Python, and HTTPS support"
 echo ""

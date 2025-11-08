@@ -55,7 +55,7 @@ sudo rurima r "$C" /bin/bash -lc '
   apt-get -o Dpkg::Options::="--force-confnew" -f install
 '
 
-# User + sudoers + remember + XDG runtime
+# User + sudoers + remember + XDG runtime + runtime tag
 sudo rurima r "$C" /bin/bash -lc "
   set -e
 
@@ -71,6 +71,7 @@ sudo rurima r "$C" /bin/bash -lc "
   # remember the chosen desktop user
   /usr/bin/install -d -m0755 /etc/ruri
   printf '%s\n' '$U' > /etc/ruri/user
+  printf '%s\n' chroot > /etc/ruri/runtime
 
   # per-user runtime dir for XDG_RUNTIME_DIR, Termux:X11, etc
   /usr/bin/install -d -m0700 -o '$U' -g '$U' /home/'$U'/.run

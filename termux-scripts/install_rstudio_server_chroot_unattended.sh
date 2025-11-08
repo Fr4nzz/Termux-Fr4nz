@@ -2,6 +2,13 @@
 set -euo pipefail
 : "${PREFIX:=/data/data/com.termux/files/usr}"
 
+# Ensure ubuntu-chroot wrapper exists
+if ! command -v ubuntu-chroot >/dev/null 2>&1; then
+  echo "[*] ubuntu-chroot not found. Setting up rooted Ubuntu container (requires sudo/tsu)..."
+  curl -fsSL https://raw.githubusercontent.com/Fr4nzz/Termux-Fr4nz/refs/heads/main/termux-scripts/setup_rooted_container_unattended.sh | bash
+  echo "[*] Rooted container setup complete."
+fi
+
 # Install inside rooted container
 curl -fsSL https://raw.githubusercontent.com/Fr4nzz/Termux-Fr4nz/refs/heads/main/container-scripts/install_rstudio_server.sh \
   | ubuntu-chroot /bin/bash -s

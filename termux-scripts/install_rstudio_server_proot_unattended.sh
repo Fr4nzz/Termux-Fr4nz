@@ -4,6 +4,13 @@ set -eu
 ( set -o pipefail ) 2>/dev/null && set -o pipefail
 : "${PREFIX:=/data/data/com.termux/files/usr}"
 
+# Ensure ubuntu-proot wrapper exists
+if ! command -v ubuntu-proot >/dev/null 2>&1; then
+  echo "[*] ubuntu-proot not found. Setting up rootless Ubuntu container..."
+  curl -fsSL https://raw.githubusercontent.com/Fr4nzz/Termux-Fr4nz/refs/heads/main/termux-scripts/setup_rootless_container_unattended.sh | bash
+  echo "[*] Rootless container setup complete."
+fi
+
 # 1) Install RStudio Server inside the rootless container (proot)
 curl -fsSL https://raw.githubusercontent.com/Fr4nzz/Termux-Fr4nz/refs/heads/main/container-scripts/install_rstudio_server.sh \
   | ubuntu-proot /bin/bash -s

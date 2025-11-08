@@ -36,7 +36,7 @@ IN
 echo $! >"$PIDFILE"
 
 # Host-side URLs
-PHONE_IP="$(ip -4 addr show wlan0 2>/dev/null | awk '/inet / {print $2}' | cut -d/ -f1 || true)"
+PHONE_IP="$(phone-ip)"
 echo "RStudio Server (proot) is up:"
 echo "  Local:  http://127.0.0.1:8787"
 [ -n "$PHONE_IP" ] && echo "  LAN:    http://$PHONE_IP:8787"

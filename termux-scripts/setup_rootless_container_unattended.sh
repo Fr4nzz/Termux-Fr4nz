@@ -58,7 +58,7 @@ cat <<'SH' | "$PREFIX/share/daijin/proot_start.sh" -r "$C" \
 set -e
 export DEBIAN_FRONTEND=noninteractive
 apt-get update -y
-apt-get install -y curl ca-certificates gnupg wget
+apt-get install -y curl ca-certificates gnupg wget python3
 SH
 
 # Maintainer helpers so adduser & postinsts work smoothly
@@ -74,6 +74,25 @@ apt-get install -y --no-install-recommends \
   sgml-base xml-core
 dpkg --configure -a || true
 apt-get -o Dpkg::Options::="--force-confnew" -f install
+SH
+
+# myip helper inside the proot container (no root needed)
+cat <<'SH' | "$PREFIX/share/daijin/proot_start.sh" -r "$C" \
+  /usr/bin/env -i HOME=/root TERM=xterm-256color \
+  PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin \
+  /bin/sh
+set -e
+cat >/usr/local/bin/myip <<'PYSH'
+#!/bin/sh
+python3 - <<'PY'
+import socket
+s=socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+s.connect(("1.1.1.1",80))
+print(s.getsockname()[0])
+s.close()
+PY
+PYSH
+chmod 0755 /usr/local/bin/myip
 SH
 
 # Create desktop user + sudo NOPASSWD + remember it + XDG runtime
@@ -106,6 +125,19 @@ SH
 # Termux → container wrappers
 TP="$PREFIX/tmp/.X11-unix"
 mkdir -p "$TP" "$PREFIX/bin"
+
+# Host-side helper: phone-ip (no root needed)
+cat >"$PREFIX/bin/phone-ip" <<'SH'
+#!/data/data/com.termux/files/usr/bin/sh
+python3 - <<'PY'
+import socket
+s=socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+s.connect(("1.1.1.1",80))
+print(s.getsockname()[0])
+s.close()
+PY
+SH
+chmod 0755 "$PREFIX/bin/phone-ip"
 
 cat >"$PREFIX/bin/ubuntu-proot" <<'SH'
 #!/data/data/com.termux/files/usr/bin/sh

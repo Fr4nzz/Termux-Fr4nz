@@ -12,6 +12,26 @@ mkdir -p "$PREFIX/bin"
 cat >"$PREFIX/bin/vscode-server-proot-start" <<'SH'
 #!/data/data/com.termux/files/usr/bin/sh
 set -e
+: "${PREFIX:=/data/data/com.termux/files/usr}"
+CONTAINER="${CONTAINER:-$HOME/containers/ubuntu-proot}"
+PROOT="$PREFIX/share/daijin/proot_start.sh"
+TP="$PREFIX/tmp/.X11-unix"; [ -d "$TP" ] || mkdir -p "$TP"
+PROOT_TMP="$PREFIX/tmp/proot"; [ -d "$PROOT_TMP" ] || mkdir -p "$PROOT_TMP"
+BIND="-b $TP:/tmp/.X11-unix -b /sdcard:/mnt/sdcard"
+
+run_container() {
+  exec env \
+    PROOT_NO_SECCOMP=1 \
+    PROOT_TMP_DIR="$PROOT_TMP" \
+    "$PROOT" -r "$CONTAINER" -e "$BIND" \
+    /usr/bin/env -i \
+      HOME=/root \
+      TERM="${TERM:-xterm-256color}" \
+      LANG="${LANG:-en_US.UTF-8}" \
+      PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin \
+      LD_PRELOAD= \
+      "$@"
+}
 
 # Parse flags
 USE_HTTPS=false
@@ -63,13 +83,34 @@ echo "========================================="
 echo ""
 
 # Run in foreground
-exec ubuntu-proot code-server-https $([ "$USE_HTTPS" = "true" ] && echo "--https")
+if [ "$USE_HTTPS" = "true" ]; then
+  run_container code-server-https --https
+else
+  run_container code-server-https
+fi
 SH
 chmod 0755 "$PREFIX/bin/vscode-server-proot-start"
 
 cat >"$PREFIX/bin/cert-server-proot" <<'SH'
 #!/data/data/com.termux/files/usr/bin/sh
-exec ubuntu-proot cert-server 8889
+: "${PREFIX:=/data/data/com.termux/files/usr}"
+CONTAINER="${CONTAINER:-$HOME/containers/ubuntu-proot}"
+PROOT="$PREFIX/share/daijin/proot_start.sh"
+TP="$PREFIX/tmp/.X11-unix"; [ -d "$TP" ] || mkdir -p "$TP"
+PROOT_TMP="$PREFIX/tmp/proot"; [ -d "$PROOT_TMP" ] || mkdir -p "$PROOT_TMP"
+BIND="-b $TP:/tmp/.X11-unix -b /sdcard:/mnt/sdcard"
+
+exec env \
+  PROOT_NO_SECCOMP=1 \
+  PROOT_TMP_DIR="$PROOT_TMP" \
+  "$PROOT" -r "$CONTAINER" -e "$BIND" \
+  /usr/bin/env -i \
+    HOME=/root \
+    TERM="${TERM:-xterm-256color}" \
+    LANG="${LANG:-en_US.UTF-8}" \
+    PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin \
+    LD_PRELOAD= \
+    cert-server 8889
 SH
 chmod 0755 "$PREFIX/bin/cert-server-proot"
 

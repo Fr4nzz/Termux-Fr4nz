@@ -29,6 +29,10 @@ rm -rf /opt/code-server 2>/dev/null || true
 install -d -m 0755 /opt/code-server
 tar -xzf "$tmpdir/code-server.tgz" -C /opt/code-server --strip-components=1
 
+# Suppress vsda warnings
+mkdir -p /opt/code-server/lib/vscode/node_modules/vsda/rust/web
+touch /opt/code-server/lib/vscode/node_modules/vsda/rust/web/vsda_{bg.wasm,js}
+
 # Enable Microsoft marketplace (faster extension downloads)
 echo "[*] Enabling Microsoft marketplace..."
 PRODUCT_JSON="/opt/code-server/lib/vscode/product.json"

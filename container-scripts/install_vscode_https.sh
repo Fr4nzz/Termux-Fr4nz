@@ -29,8 +29,8 @@ mkdir -p "$HOME/.local/share/mkcert"
 # Install local CA
 mkcert -install
 
-# Get local IP
-LOCAL_IP=$(hostname -I | awk '{print $1}' 2>/dev/null || echo "127.0.0.1")
+# Get local IP using myip helper
+LOCAL_IP=$(myip 2>/dev/null || echo "127.0.0.1")
 
 # Generate certificate for localhost, IPs, and wildcard for local network
 echo "[*] Generating certificates for localhost, $LOCAL_IP, and wildcards..."
@@ -49,41 +49,88 @@ chmod 644 cert.pem
 
 echo "[*] Certificates created at /opt/code-server-certs/"
 
-# 3. Create HTTPS wrapper
+# 3. Create HTTPS wrapper with HTTP/HTTPS flag support
 mkdir -p /usr/local/bin
 tee /usr/local/bin/code-server-https >/dev/null <<'SCRIPT'
 #!/bin/sh
 set -e
-PORT="${1:-13338}"
+ 
+# Parse flags
+USE_HTTPS=false
+PORT="13338"
+
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --https) USE_HTTPS=true; shift ;;
+    --port) PORT="$2"; shift 2 ;;
+    *) PORT="$1"; shift ;;
+  esac
+done
+
 export HOME="${HOME:-/root}"
 mkdir -p "$HOME/.code-server-data" "$HOME/.code-server-extensions"
 
-CERT_DIR="/opt/code-server-certs"
-LOCAL_IP=$(hostname -I | awk '{print $1}' 2>/dev/null || echo "N/A")
+# Clear problematic environment variables
+unset SHELL ZDOTDIR ZSH OH_MY_ZSH
 
-echo "========================================="
-echo "VS Code Server (HTTPS)"
-echo "========================================="
-echo ""
-echo "🔒 Access via HTTPS:"
-echo "   https://127.0.0.1:$PORT (localhost)"
-echo "   https://$LOCAL_IP:$PORT (LAN)"
-echo ""
-echo "📥 First time? Install certificate:"
-echo "   http://$LOCAL_IP:8889/setup"
-echo ""
-echo "Press Ctrl+C to stop"
-echo "========================================="
+LOCAL_IP=$(myip 2>/dev/null || echo "127.0.0.1")
 
-exec /opt/code-server/bin/code-server \
-  --bind-addr "0.0.0.0:$PORT" \
-  --cert "$CERT_DIR/cert.pem" \
-  --cert-key "$CERT_DIR/key.pem" \
-  --auth none \
-  --user-data-dir "$HOME/.code-server-data" \
-  --extensions-dir "$HOME/.code-server-extensions" \
-  --disable-telemetry \
-  --disable-update-check
+if [ "$USE_HTTPS" = "true" ]; then
+  CERT_DIR="/opt/code-server-certs"
+  
+  if [ ! -f "$CERT_DIR/cert.pem" ]; then
+    echo "❌ HTTPS certificates not found. Run: cert-server"
+    exit 1
+  fi
+  
+  echo "========================================="
+  echo "VS Code Server (HTTPS)"
+  echo "========================================="
+  echo ""
+  echo "🔒 HTTPS enabled:"
+  echo "   https://$LOCAL_IP:$PORT (LAN)"
+  echo ""
+  echo "📥 First time? Install certificate:"
+  echo "   http://$LOCAL_IP:8889/setup"
+  echo ""
+  echo "💡 Zoom UI: Ctrl+Plus/Minus or pinch gesture"
+  echo ""
+  echo "Press Ctrl+C to stop"
+  echo "========================================="
+
+  exec /opt/code-server/bin/code-server \
+    --bind-addr "0.0.0.0:$PORT" \
+    --cert "$CERT_DIR/cert.pem" \
+    --cert-key "$CERT_DIR/key.pem" \
+    --auth none \
+    --user-data-dir "$HOME/.code-server-data" \
+    --extensions-dir "$HOME/.code-server-extensions" \
+    --disable-telemetry \
+    --disable-update-check \
+    --disable-workspace-trust
+else
+  echo "========================================="
+  echo "VS Code Server (HTTP)"
+  echo "========================================="
+  echo ""
+  echo "Access: http://127.0.0.1:$PORT"
+  echo "LAN:    http://$LOCAL_IP:$PORT"
+  echo ""
+  echo "💡 For HTTPS: code-server-https --https"
+  echo "💡 Zoom UI: Ctrl+Plus/Minus or pinch gesture"
+  echo ""
+  echo "Press Ctrl+C to stop"
+  echo "========================================="
+
+  exec /opt/code-server/bin/code-server \
+    --bind-addr "0.0.0.0:$PORT" \
+    --auth none \
+    --user-data-dir "$HOME/.code-server-data" \
+    --extensions-dir "$HOME/.code-server-extensions" \
+    --disable-telemetry \
+    --disable-update-check \
+    --disable-workspace-trust
+fi
 SCRIPT
 chmod 0755 /usr/local/bin/code-server-https
 
@@ -244,7 +291,7 @@ tee /usr/local/bin/cert-server >/dev/null <<'SCRIPT'
 #!/bin/sh
 set -e
 PORT="${1:-8889}"
-LOCAL_IP=$(hostname -I | awk '{print $1}' 2>/dev/null || echo "127.0.0.1")
+LOCAL_IP=$(myip 2>/dev/null || echo "127.0.0.1")
 
 cd /opt/code-server-certs
 
@@ -275,7 +322,7 @@ echo "========================================="
 echo "Quick Start:"
 echo "========================================="
 echo ""
-echo "1. Start certificate server:"
+echo "1. Start certificate server (for LAN access):"
 echo "   cert-server"
 echo ""
 echo "2. On your laptop, open browser:"
@@ -283,12 +330,11 @@ echo "   http://$LOCAL_IP:8889/setup"
 echo ""
 echo "3. Follow instructions to install certificate"
 echo ""
-echo "4. Start HTTPS server:"
-echo "   code-server-https"
-echo ""
-echo "5. Access VS Code:"
-echo "   https://$LOCAL_IP:13338"
+echo "4. Start VS Code Server:"
+echo "   code-server-https          # HTTP mode (localhost)"
+echo "   code-server-https --https  # HTTPS mode (LAN)"
 echo ""
 echo "Commands:"
-echo "  cert-server           - Start certificate download server"
-echo "  code-server-https     - Start VS Code with HTTPS"
+echo "  cert-server              - Start certificate download server"
+echo "  code-server-https        - Start VS Code (HTTP by default)"
+echo "  code-server-https --https - Start VS Code with HTTPS"

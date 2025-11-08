@@ -3,30 +3,18 @@ set -eu
 ( set -o pipefail ) 2>/dev/null && set -o pipefail
 : "${PREFIX:=/data/data/com.termux/files/usr}"
 
-# Install code-server inside the container (includes R, Python, and HTTPS setup)
-# Now uses default shell (zsh if installed, bash otherwise)
+# Install code-server inside the container
 curl -fsSL https://raw.githubusercontent.com/Fr4nzz/Termux-Fr4nz/refs/heads/main/container-scripts/install_vscode_server.sh \
   | ubuntu-proot
 
-# Termux wrappers
-mkdir -p "$PREFIX/bin" "$PREFIX/var/run"
+mkdir -p "$PREFIX/bin"
 
 cat >"$PREFIX/bin/vscode-server-proot-start" <<'SH'
 #!/data/data/com.termux/files/usr/bin/sh
 set -e
-: "${PREFIX:=/data/data/com.termux/files/usr}"
-PIDFILE="$PREFIX/var/run/vscode-proot.pid"
-mkdir -p "$PREFIX/var/run"
 
-if [ -f "$PIDFILE" ] && kill -0 "$(cat "$PIDFILE")" 2>/dev/null; then
-  echo "vscode-server-proot-start: already running (PID $(cat "$PIDFILE"))."
-  exit 0
-fi
-
-# Check if HTTPS certs exist, use HTTPS if available
-HTTPS_CHECK=$(ubuntu-proot /bin/sh -c '[ -f /opt/code-server-certs/cert.pem ] && echo "yes" || echo "no"')
-
-if [ "$HTTPS_CHECK" = "yes" ]; then
+# Check if HTTPS certs exist
+if ubuntu-proot test -f /opt/code-server-certs/cert.pem; then
   LAUNCHER="code-server-https"
   PROTOCOL="https"
 else
@@ -34,13 +22,7 @@ else
   PROTOCOL="http"
 fi
 
-# Start server in background using default shell with login
-ubuntu-proot /bin/sh -c "exec \$(getent passwd root | cut -d: -f7) -lc '$LAUNCHER'" > /dev/null 2>&1 &
-
-echo $! >"$PIDFILE"
-
-# Detect phone IP
-PHONE_IP="$(phone-ip)"
+PHONE_IP="$(phone-ip 2>/dev/null || echo '(unknown)')"
 
 echo "========================================="
 echo "VS Code Server (proot)"
@@ -50,99 +32,31 @@ echo "Local:  $PROTOCOL://127.0.0.1:13338"
 echo "LAN:    $PROTOCOL://$PHONE_IP:13338"
 echo ""
 if [ "$PROTOCOL" = "https" ]; then
-  echo "✅ HTTPS enabled - all features work!"
+  echo "✅ HTTPS enabled"
 else
-  echo "⚠️  HTTP mode - for HTTPS setup run:"
-  echo "   cert-server-proot"
+  echo "⚠️  HTTP mode - for HTTPS: cert-server-proot"
 fi
 echo ""
-echo "Stop with: vscode-server-proot-stop"
+echo "Press Ctrl+C to stop"
+echo "========================================="
+echo ""
+
+# Run in foreground
+exec ubuntu-proot "$LAUNCHER"
 SH
 chmod 0755 "$PREFIX/bin/vscode-server-proot-start"
 
-cat >"$PREFIX/bin/vscode-server-proot-stop" <<'SH'
-#!/data/data/com.termux/files/usr/bin/sh
-set -e
-: "${PREFIX:=/data/data/com.termux/files/usr}"
-PIDFILE="$PREFIX/var/run/vscode-proot.pid"
-
-if [ -f "$PIDFILE" ]; then
-  PID="$(cat "$PIDFILE")"
-  ubuntu-proot /bin/sh -c 'pkill -f "/opt/code-server/bin/code-server"' 2>/dev/null || true
-  if kill -0 "$PID" 2>/dev/null; then
-    kill "$PID" 2>/dev/null || true
-    sleep 1
-    kill -9 "$PID" 2>/dev/null || true
-    echo "VS Code Server (proot) stopped."
-  else
-    echo "Not running (stale pidfile)."
-  fi
-  rm -f "$PIDFILE"
-else
-  echo "Not running (no pidfile)."
-fi
-SH
-chmod 0755 "$PREFIX/bin/vscode-server-proot-stop"
-
 cat >"$PREFIX/bin/cert-server-proot" <<'SH'
 #!/data/data/com.termux/files/usr/bin/sh
-set -e
-
-# Use default shell with login
-exec ubuntu-proot /bin/sh -c "exec \$(getent passwd root | cut -d: -f7) -lc 'cert-server 8889'"
+exec ubuntu-proot cert-server 8889
 SH
 chmod 0755 "$PREFIX/bin/cert-server-proot"
 
-# Get phone IP for display
 PHONE_IP="$(phone-ip)"
-
-echo "✅ VS Code Server (proot) installed with R, Python, and HTTPS support"
+echo "✅ VS Code Server (proot) installed"
 echo ""
-echo "========================================="
-echo "Quick Start:"
-echo "========================================="
+echo "Start: vscode-server-proot-start"
+echo "Stop:  Ctrl+C"
 echo ""
-echo "Start server:"
-echo "  vscode-server-proot-start"
-echo ""
-echo "Stop server:"
-echo "  vscode-server-proot-stop"
-echo ""
-echo "========================================="
-echo "Access Methods:"
-echo "========================================="
-echo ""
-echo "📱 Phone / Laptop (ADB):"
-echo "   http://127.0.0.1:13338"
-echo "   (Run: adb forward tcp:13338 tcp:13338)"
-echo "   ✅ All features work via localhost"
-echo ""
-echo "💻 Laptop (LAN) - HTTP:"
-echo "   http://$PHONE_IP:13338"
-echo "   ⚠️  Limited: webviews/clipboard don't work"
-echo ""
-echo "💻 Laptop (LAN) - HTTPS:"
-echo "   https://$PHONE_IP:13338"
-echo "   ✅ Full features! (requires certificate setup)"
-echo ""
-echo "========================================="
-echo "First Time HTTPS Setup (one-time):"
-echo "========================================="
-echo ""
-echo "1. Run: cert-server-proot"
-echo "2. Open on laptop: http://$PHONE_IP:8889/setup"
-echo "3. Follow installation instructions"
-echo "4. Restart vscode-server-proot-start"
-echo "5. Access: https://$PHONE_IP:13338"
-echo ""
-echo "========================================="
-echo "Languages configured:"
-echo "========================================="
-echo ""
-echo "  - R (radian console, httpgd plots, Shiny with F5)"
-echo "  - Python (Ctrl+Enter to run code)"
-echo ""
-echo "💡 Tips:"
-echo "  - Browser zoom: Ctrl+/- or pinch gesture"
-echo "  - Python terminal: Open .py → Ctrl+Enter"
-echo "  - R terminal: Ctrl+Shift+P → 'R: Create R Terminal'"
+echo "Access: http://127.0.0.1:13338 or http://$PHONE_IP:13338"
+echo "HTTPS:  cert-server-proot (one-time setup)"

@@ -171,11 +171,11 @@ if [ ! -t 0 ]; then
     "$C" "$SHELL_BIN"
 fi
 
-# Run command as login shell
+# Run command as user
 exec sudo rurima r \
   -m "$TP" /tmp/.X11-unix \
   -m /sdcard /mnt/sdcard \
-  "$C" /bin/bash -lc "$*"
+  "$C" /bin/su - "$U" -c 'exec "$@"' sh -- "$@"
 SH
 chmod 0755 "$PREFIX/bin/ubuntu-chroot"
 

@@ -146,60 +146,26 @@ C="$HOME/containers/ubuntu-proot"
 TP="$PREFIX/tmp/.X11-unix"; [ -d "$TP" ] || mkdir -p "$TP"
 
 # Parse --user flag
-U="root"  # default to root
+U="root"
 if [ "$1" = "--user" ]; then
   U="$2"
   shift 2
 fi
 
-# Setup
 PROOT="$PREFIX/share/daijin/proot_start.sh"
 BIND="-b $TP:/tmp/.X11-unix -b /sdcard:/mnt/sdcard"
-HOME_DIR="/root"; [ "$U" != "root" ] && HOME_DIR="/home/$U"
 
-# Common env setup
-ENV_SETUP="/usr/bin/env -i HOME=$HOME_DIR TERM=${TERM:-xterm-256color} PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin LANG=${LANG:-en_US.UTF-8}"
+# No args → interactive
+[ "$#" -eq 0 ] && exec "$PROOT" -r "$C" -e "$BIND" /bin/su - "$U"
 
-# No args → interactive login as user
-if [ "$#" -eq 0 ]; then
-  exec "$PROOT" -r "$C" -e "$BIND" $ENV_SETUP /bin/su - "$U"
-fi
-
-# Piped/redirected input → run default shell reading from stdin
+# Piped input → shell  
 if [ ! -t 0 ]; then
-  # Allow user to specify shell, otherwise use default from /etc/passwd
-  SHELL_BIN=""
-  
-  # Check if first argument is a shell specification
-  case "$1" in
-    /bin/sh|sh|/bin/bash|bash|/bin/zsh|zsh)
-      case "$1" in
-        /bin/sh|sh) SHELL_BIN="/bin/sh" ;;
-        /bin/bash|bash) SHELL_BIN="/bin/bash" ;;
-        /bin/zsh|zsh) SHELL_BIN="/bin/zsh" ;;
-      esac
-      shift
-      ;;
-  esac
-  
-  # If no shell specified, get default shell for user
-  if [ -z "$SHELL_BIN" ]; then
-    # Get default shell from container's /etc/passwd
-    SHELL_BIN=$("$PROOT" -r "$C" -e "$BIND" $ENV_SETUP /bin/sh -c "getent passwd $U | cut -d: -f7")
-    # Fallback to /bin/sh if empty
-    [ -z "$SHELL_BIN" ] && SHELL_BIN="/bin/sh"
-  fi
-  
-  # Handle -s flag (read from stdin) - consume it if present
-  if [ "$1" = "-s" ]; then
-    shift
-  fi
-  
-  exec "$PROOT" -r "$C" -e "$BIND" $ENV_SETUP "$SHELL_BIN"
+  exec "$PROOT" -r "$C" -e "$BIND" /bin/bash -l
 fi
 
-# Run command directly (no su, just exec the command)
-exec "$PROOT" -r "$C" -e "$BIND" $ENV_SETUP "$@"
+# Command - set environment then execute
+# Set PATH via env command to ensure it's available
+exec "$PROOT" -r "$C" -e "$BIND" /usr/bin/env PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin HOME=/root "$@"
 SH
 chmod 0755 "$PREFIX/bin/ubuntu-proot"
 

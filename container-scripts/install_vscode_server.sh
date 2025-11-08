@@ -51,6 +51,27 @@ fi
 mkdir -p /root
 chown -R root:root /root
 
+# Configure VS Code settings to prevent shell errors
+echo "[*] Configuring VS Code settings..."
+mkdir -p /root/.code-server-data/User
+cat > /root/.code-server-data/User/settings.json <<'SETTINGS'
+{
+  "terminal.integrated.defaultProfile.linux": "bash",
+  "terminal.integrated.profiles.linux": {
+    "bash": {
+      "path": "/bin/bash",
+      "icon": "terminal-bash"
+    }
+  },
+  "terminal.integrated.inheritEnv": false,
+  "extensions.autoUpdate": false,
+  "extensions.autoCheckUpdates": false,
+  "update.mode": "none",
+  "telemetry.telemetryLevel": "off",
+  "workbench.enableExperiments": false
+}
+SETTINGS
+
 # Helper scripts
 install -d -m 0755 /usr/local/bin
 
@@ -62,14 +83,10 @@ PORT="${1:-13338}"
 export HOME="${HOME:-/root}"
 mkdir -p "$HOME/.code-server-data" "$HOME/.code-server-extensions"
 
-LOCAL_IP=$(python3 - <<'PY'
-import socket
-s=socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-s.connect(("1.1.1.1",80))
-print(s.getsockname()[0])
-s.close()
-PY
-)
+# Clear problematic env vars
+unset SHELL ZDOTDIR ZSH OH_MY_ZSH
+
+LOCAL_IP=$(myip 2>/dev/null || echo "127.0.0.1")
 
 echo "========================================="
 echo "VS Code Server (HTTP)"
@@ -78,6 +95,7 @@ echo ""
 echo "Access: http://127.0.0.1:$PORT"
 echo "LAN:    http://$LOCAL_IP:$PORT"
 echo ""
+echo "💡 For HTTPS: code-server-https --https"
 echo "💡 Zoom UI: Ctrl+Plus/Minus or pinch gesture"
 echo ""
 echo "Press Ctrl+C to stop"
@@ -89,7 +107,8 @@ exec /opt/code-server/bin/code-server \
   --user-data-dir "$HOME/.code-server-data" \
   --extensions-dir "$HOME/.code-server-extensions" \
   --disable-telemetry \
-  --disable-update-check
+  --disable-update-check \
+  --disable-workspace-trust
 SCRIPT
 chmod 0755 /usr/local/bin/code-server-local
 
@@ -148,8 +167,8 @@ echo "Setup complete!"
 echo "========================================="
 echo ""
 echo "Commands:"
-echo "  code-server-local      # Start HTTP server"
-echo "  code-server-https      # Start HTTPS server (clipboard/webviews work!)"
+echo "  code-server-local      # Start HTTP server (default)"
+echo "  code-server-https      # Start server (HTTP by default, --https for HTTPS)"
 echo "  code-server-stop       # Stop server"
 echo "  cert-server            # Serve certificate for installation"
 echo "  ext-install <id>       # Install extension"
@@ -163,4 +182,4 @@ echo "For HTTPS (clipboard/webviews work):"
 echo "  1. Run: cert-server"
 echo "  2. Open: http://<phone-ip>:8889/setup"
 echo "  3. Follow installation instructions"
-echo "  4. Run: code-server-https"
+echo "  4. Run: code-server-https --https"

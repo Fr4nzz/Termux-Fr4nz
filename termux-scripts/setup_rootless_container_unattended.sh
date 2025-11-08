@@ -147,52 +147,25 @@ TP="$PREFIX/tmp/.X11-unix"; [ -d "$TP" ] || mkdir -p "$TP"
 
 # Parse --user flag
 U="root"
-if [ "$#" -gt 0 ] && [ "$1" = "--user" ]; then
+if [ "$1" = "--user" ]; then
   U="$2"
   shift 2
 fi
 
 PROOT="$PREFIX/share/daijin/proot_start.sh"
 BIND="-b $TP:/tmp/.X11-unix -b /sdcard:/mnt/sdcard"
-TERM_VALUE="${TERM:-xterm-256color}"
-LANG_VALUE="${LANG:-en_US.UTF-8}"
-PROOT_TMP_DEFAULT="$PREFIX/tmp/proot"
-mkdir -p "$PROOT_TMP_DEFAULT"
 
-run_proot() {
-  HOME_DIR="/root"
-  [ "$U" != "root" ] && HOME_DIR="/home/$U"
-  exec env \
-    PROOT_NO_SECCOMP=1 \
-    PROOT_TMP_DIR="$PROOT_TMP_DEFAULT" \
-    "$PROOT" -r "$C" -e "$BIND" \
-    /usr/bin/env -i \
-      HOME="$HOME_DIR" \
-      TERM="$TERM_VALUE" \
-      LANG="$LANG_VALUE" \
-      PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin \
-      "$@"
-}
+# No args → interactive
+[ "$#" -eq 0 ] && exec "$PROOT" -r "$C" -e "$BIND" /bin/su - "$U"
 
-# Piped input → respect provided shell or default to bash
+# Piped input → shell  
 if [ ! -t 0 ]; then
-  SHELL_BIN="/bin/bash"
-  case "$1" in
-    /bin/sh|sh) SHELL_BIN="/bin/sh"; shift ;;
-    /bin/bash|bash) SHELL_BIN="/bin/bash"; shift ;;
-    /bin/zsh|zsh) SHELL_BIN="/bin/zsh"; shift ;;
-  esac
-  [ "$1" = "-s" ] && shift
-  run_proot "$SHELL_BIN"
+  exec "$PROOT" -r "$C" -e "$BIND" /bin/bash -l
 fi
 
-# No args → interactive login shell as target user
-if [ "$#" -eq 0 ]; then
-  run_proot /bin/su - "$U"
-fi
-
-# Otherwise run requested command with clean env
-run_proot "$@"
+# Command - set environment then execute
+# Set PATH via env command to ensure it's available
+exec "$PROOT" -r "$C" -e "$BIND" /usr/bin/env PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin HOME=/root "$@"
 SH
 chmod 0755 "$PREFIX/bin/ubuntu-proot"
 

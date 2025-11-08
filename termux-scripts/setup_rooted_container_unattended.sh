@@ -157,9 +157,6 @@ exec sudo rurima r -U "$C"
 SH
 chmod 0755 "$PREFIX/bin/ubuntu-chroot-u"
 
-echo "✅ Rooted container ready. Enter with: ubuntu-chroot"
-echo ""
-
 # Install Zsh based on earlier answer
 case "$INSTALL_ZSH" in
   [Yy]*|"")
@@ -175,3 +172,6 @@ case "$INSTALL_ZSH" in
     echo "Skipping Zsh installation"
     ;;
 esac
+
+echo "✅ Rooted container ready. Enter with: ubuntu-chroot"
+echo ""

@@ -178,9 +178,6 @@ pkill -f "proot .*${C}" || true
 SH
 chmod 0755 "$PREFIX/bin/ubuntu-proot-u"
 
-echo "✅ Rootless container ready. Enter with: ubuntu-proot"
-echo ""
-
 # Install Zsh based on earlier answer
 case "$INSTALL_ZSH" in
   [Yy]*|"")
@@ -196,3 +193,6 @@ case "$INSTALL_ZSH" in
     echo "Skipping Zsh installation"
     ;;
 esac
+
+echo "✅ Rootless container ready. Enter with: ubuntu-proot"
+echo ""

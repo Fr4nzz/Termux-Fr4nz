@@ -53,20 +53,20 @@ chmod 0755 "$PREFIX/bin/rstudio-chroot-start"
 
 cat >"$PREFIX/bin/rstudio-chroot-stop" <<'SH'
 #!/data/data/com.termux/files/usr/bin/sh
+set -e
 : "${PREFIX:=/data/data/com.termux/files/usr}"
 PIDFILE="$PREFIX/var/run/rstudio-chroot.pid"
-
-# Stop the actual server first
-ubuntu-chroot /bin/bash -lc 'rstudio-server stop' 2>/dev/null || true
-
-# Then clean up the background launcher
+ubuntu-chroot /bin/bash -lc '
+/usr/sbin/rstudio-server stop || true
+pkill -x rserver  2>/dev/null || true
+pkill -x rsession 2>/dev/null || true
+' >/dev/null 2>&1 || true
 if [ -f "$PIDFILE" ]; then
   PID="$(cat "$PIDFILE")"
   if kill -0 "$PID" 2>/dev/null; then
     kill "$PID" 2>/dev/null || true
-    sleep 1
     kill -9 "$PID" 2>/dev/null || true
-    echo "RStudio (chroot) stopped."
+    echo "Stopped launcher (PID $PID)."
   else
     echo "Not running (stale pidfile)."
   fi
@@ -74,6 +74,7 @@ if [ -f "$PIDFILE" ]; then
 else
   echo "Not running (no pidfile)."
 fi
+echo "RStudio (chroot) stopped."
 SH
 chmod 0755 "$PREFIX/bin/rstudio-chroot-stop"
 

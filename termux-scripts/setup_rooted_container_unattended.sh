@@ -97,6 +97,38 @@ sudo rurima r "$C" /bin/bash -lc "
   /bin/su - '$U' -c \"echo 'export TERM=xterm-256color' >> ~/.bashrc\"
 "
 
+# Auto-launch zsh workaround for chroot TTY issues (works for both zsh and non-zsh users)
+sudo rurima r "$C" /bin/bash -lc '
+  # Add auto-launcher for root
+  cat >> /root/.bashrc <<'"'"'ZSHFIX'"'"'
+
+# Chroot workaround: auto-launch zsh if it'"'"'s the login shell
+if [ -z "$ZSH_LAUNCHED" ] && [ -t 0 ]; then
+  REAL_SHELL=$(getent passwd "$(whoami)" | cut -d: -f7)
+  if echo "$REAL_SHELL" | grep -q zsh && [ -x "$REAL_SHELL" ]; then
+    export ZSH_LAUNCHED=1
+    exec "$REAL_SHELL" -l
+  fi
+fi
+ZSHFIX
+'
+
+sudo rurima r "$C" /bin/bash -lc "
+  # Add auto-launcher for desktop user
+  su - '$U' -c 'cat >> ~/.bashrc <<ZSHFIX
+
+# Chroot workaround: auto-launch zsh if it\047s the login shell
+if [ -z \"\\\$ZSH_LAUNCHED\" ] && [ -t 0 ]; then
+  REAL_SHELL=\\\$(getent passwd \"\\\$(whoami)\" | cut -d: -f7)
+  if echo \"\\\$REAL_SHELL\" | grep -q zsh && [ -x \"\\\$REAL_SHELL\" ]; then
+    export ZSH_LAUNCHED=1
+    exec \"\\\$REAL_SHELL\" -l
+  fi
+fi
+ZSHFIX
+'
+"
+
 # Termux → chroot wrappers
 TP="$PREFIX/tmp/.X11-unix"
 mkdir -p "$TP" "$PREFIX/bin"
@@ -116,66 +148,45 @@ chmod 0755 "$PREFIX/bin/phone-ip"
 
 cat >"$PREFIX/bin/ubuntu-chroot" <<'SH'
 #!/data/data/com.termux/files/usr/bin/sh
-PREFIX="${PREFIX:-/data/data/com.termux/files/usr}"
-C="${CONTAINER:-$HOME/containers/ubuntu-chroot}"
-TP="$PREFIX/tmp/.X11-unix"
-[ -d "$TP" ] || mkdir -p "$TP"
+: "${PREFIX:=/data/data/com.termux/files/usr}"
+C="$HOME/containers/ubuntu-chroot"
+TP="$PREFIX/tmp/.X11-unix"; [ -d "$TP" ] || mkdir -p "$TP"
 
 # Parse --user flag
-U="root"  # default to root
+U="root"
 if [ "$1" = "--user" ]; then
   U="$2"
   shift 2
+  [ "$#" -gt 0 ] && echo "Warning: --user only works for interactive mode" >&2 && U="root"
 fi
 
-# No args → interactive login shell as user
-if [ "$#" -eq 0 ]; then
-  exec sudo rurima r \
-    -m "$TP" /tmp/.X11-unix \
-    -m /sdcard /mnt/sdcard \
-    "$C" /bin/su - "$U"
-fi
+# Clear problematic environment variables
+unset SHELL ZDOTDIR ZSH OH_MY_ZSH
 
-# Piped/redirected input → use default shell
+# Piped input check FIRST
 if [ ! -t 0 ]; then
-  # Allow user to specify shell, otherwise get default from /etc/passwd
-  SHELL_BIN=""
-  
-  # Check if first argument is a shell specification
-  case "$1" in
-    /bin/sh|sh|/bin/bash|bash|/bin/zsh|zsh)
-      case "$1" in
-        /bin/sh|sh) SHELL_BIN="/bin/sh" ;;
-        /bin/bash|bash) SHELL_BIN="/bin/bash" ;;
-        /bin/zsh|zsh) SHELL_BIN="/bin/zsh" ;;
-      esac
-      shift
-      ;;
-  esac
-  
-  # If no shell specified, get default shell for user from container
-  if [ -z "$SHELL_BIN" ]; then
-    SHELL_BIN=$(sudo rurima r "$C" /bin/sh -c "getent passwd '$U' | cut -d: -f7")
-    # Fallback to /bin/sh if empty or invalid
-    [ -z "$SHELL_BIN" ] && SHELL_BIN="/bin/sh"
-  fi
-  
-  # Handle -s flag (read from stdin) - consume it if present
-  if [ "$1" = "-s" ]; then
-    shift
-  fi
-  
   exec sudo rurima r \
     -m "$TP" /tmp/.X11-unix \
     -m /sdcard /mnt/sdcard \
-    "$C" "$SHELL_BIN"
+    "$C" /usr/bin/env -i \
+      HOME=/root \
+      TERM="${TERM:-xterm-256color}" \
+      PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin \
+      "${@:-/bin/bash}"
 fi
 
-# Run command as user
+# No args → interactive - always use bash, .bashrc will auto-launch zsh
+[ "$#" -eq 0 ] && exec sudo rurima r \
+  -m "$TP" /tmp/.X11-unix \
+  -m /sdcard /mnt/sdcard \
+  "$C" /bin/su - "$U" -s /bin/bash
+
+# Command - use simple env approach
 exec sudo rurima r \
   -m "$TP" /tmp/.X11-unix \
   -m /sdcard /mnt/sdcard \
-  "$C" /bin/su - "$U" -c 'exec "$@"' sh -- "$@"
+  "$C" /usr/bin/env PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin HOME=/root \
+  "$@"
 SH
 chmod 0755 "$PREFIX/bin/ubuntu-chroot"
 

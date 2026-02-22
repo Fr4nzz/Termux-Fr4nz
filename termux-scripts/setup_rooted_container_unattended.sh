@@ -21,6 +21,9 @@ ask_prompts
 pkg update -y >/dev/null || true
 pkg install -y tsu python >/dev/null
 
+# Pre-create tsu state dir so it's owned by the Termux user, not root
+mkdir -p "$HOME/.suroot" 2>/dev/null || true
+
 # Container runner for chroot (via rurima/ruri)
 crun() {
   sudo rurima r "$C" \

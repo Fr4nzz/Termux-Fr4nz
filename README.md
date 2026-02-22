@@ -11,6 +11,7 @@ Scripts for setting up Termux and running Linux containers with development envi
 - [Development Servers (Web IDEs)](#development-servers-web-ides)
 - [Desktop Environment (GUI)](#desktop-environment-gui)
 - [Desktop Applications](#desktop-applications)
+- [AI Assistant (ZeroClaw)](#ai-assistant-zeroclaw)
 - [Additional Tools](#additional-tools)
 - [Troubleshooting](#troubleshooting)
 
@@ -241,6 +242,48 @@ curl -fsSL https://raw.githubusercontent.com/Fr4nzz/Termux-Fr4nz/refs/heads/main
 **Install:**
 ```bash
 curl -fsSL https://raw.githubusercontent.com/Fr4nzz/Termux-Fr4nz/refs/heads/main/container-scripts/install_desktopify.sh | bash
+```
+
+---
+
+## AI Assistant (ZeroClaw)
+
+Lightweight AI agent (~3MB) with Telegram bot support. Runs in the chroot container using OpenAI (ChatGPT OAuth or API key).
+
+### Rooted
+
+**Install:**
+```bash
+curl -fsSL https://raw.githubusercontent.com/Fr4nzz/Termux-Fr4nz/refs/heads/main/termux-scripts/install_zeroclaw_chroot_unattended.sh | bash
+```
+
+**Setup (ChatGPT OAuth — no API key needed):**
+```bash
+zeroclaw-chroot onboard --provider openai-codex
+zeroclaw-chroot auth login --provider openai-codex
+# Open the URL in a browser, log in, paste the redirect URL:
+zeroclaw-chroot auth paste-redirect --provider openai-codex --input 'REDIRECT_URL'
+```
+
+**Setup (API key):**
+```bash
+zeroclaw-chroot onboard --api-key sk-... --provider openai
+```
+
+**Telegram bot (optional):**
+```bash
+# 1. Get a bot token from @BotFather on Telegram
+# 2. Add the channel:
+zeroclaw-chroot channel add telegram '{"bot_token":"YOUR_TOKEN","name":"my-bot"}'
+# 3. Start daemon and note the bind code:
+zeroclaw-chroot-daemon
+# 4. Send /bind <code> to your bot in Telegram
+```
+
+**Usage:**
+```bash
+zeroclaw-chroot agent              # interactive chat
+zeroclaw-chroot-daemon             # background service + Telegram
 ```
 
 ---

@@ -35,7 +35,7 @@ elif [[ -d "$_termux_home/.oh-my-zsh" ]]; then
   export ZSH="$_termux_home/.oh-my-zsh"
 fi
 
-plugins=(git z sudo history-substring-search fzf zsh-autosuggestions zsh-syntax-highlighting)
+plugins=(git z sudo history-substring-search fzf colored-man-pages zsh-autosuggestions zsh-syntax-highlighting)
 ZSH_THEME="robbyrussell"
 source "$ZSH/oh-my-zsh.sh"
 
@@ -46,10 +46,16 @@ autoload -U select-word-style; select-word-style bash
 HISTFILE=$HOME/.zsh_history; HISTSIZE=50000; SAVEHIST=50000
 setopt interactive_comments hist_ignore_dups share_history
 
-# ----- Termux/SSH-friendly keybindings (no prompts) -----
-# 1) Prefer terminfo
-[[ -n ${terminfo[khome]} ]] && { bindkey -M emacs "${terminfo[khome]}" beginning-of-line; bindkey -M viins "${terminfo[khome]}" beginning-of-line; }
-[[ -n ${terminfo[kend]}  ]] && { bindkey -M emacs "${terminfo[kend]}"  end-of-line;      bindkey -M viins "${terminfo[kend]}"  end-of-line; }
+# ----- Terminal application mode + terminfo keybindings -----
+# Ensure terminal is in application mode when ZLE is active.
+# Only then are $terminfo values valid (fixes Termux keyboard keys).
+if (( ${+terminfo[smkx]} && ${+terminfo[rmkx]} )); then
+  autoload -Uz add-zle-hook-widget
+  function zle_application_mode_start { echoti smkx }
+  function zle_application_mode_stop { echoti rmkx }
+  add-zle-hook-widget -Uz zle-line-init zle_application_mode_start
+  add-zle-hook-widget -Uz zle-line-finish zle_application_mode_stop
+fi
 
 # ----- tsu wrapper: root zsh with same config -----
 # Always use absolute path so it works even if PATH differs under tsu.
@@ -57,8 +63,9 @@ tsu(){ command /data/data/com.termux/files/usr/bin/tsu -s zsh "$@"; }
 ZRC
 
 say "5/5" "Make zsh default, share config with root, finalize…"
-mkdir -p "$HOME/.suroot"
-ln -sf "$HOME/.zshrc" "$HOME/.suroot/.zshrc"
+# Share config with root (tsu); skip if .suroot is owned by root
+mkdir -p "$HOME/.suroot" 2>/dev/null || true
+ln -sf "$HOME/.zshrc" "$HOME/.suroot/.zshrc" 2>/dev/null || true
 chsh -s zsh
 termux-reload-settings || true
 
@@ -66,7 +73,7 @@ cat <<'NOTE'
 
 ✅ Done: OMZ + plugins + robust tsu setup
 - Root (`tsu`) now sources OMZ from the *real* Termux home if HOME=.suroot.
-- Keys fixed non-interactively (Home/End, Ctrl←/→).
+- Keys (Home/End/Delete/PgUp/PgDn) work via terminfo application mode.
 - Change theme/plugins: edit ~/.zshrc; then `exec zsh`.
 
 NOTE

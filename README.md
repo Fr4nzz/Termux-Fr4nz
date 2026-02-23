@@ -12,6 +12,7 @@ Scripts for setting up Termux and running Linux containers with development envi
 - [Desktop Environment (GUI)](#desktop-environment-gui)
 - [Desktop Applications](#desktop-applications)
 - [AI Assistant (ZeroClaw)](#ai-assistant-zeroclaw)
+- [Claude Telegram Bot](#claude-telegram-bot)
 - [Additional Tools](#additional-tools)
 - [Troubleshooting](#troubleshooting)
 
@@ -284,6 +285,33 @@ zeroclaw-chroot-daemon
 ```bash
 zeroclaw-chroot agent              # interactive chat
 zeroclaw-chroot-daemon             # background service + Telegram
+```
+
+---
+
+## Claude Telegram Bot
+
+Chat with Claude via Telegram. Uses Claude CLI authentication (requires Claude/Anthropic subscription). Runs in the chroot container.
+
+### Rooted
+
+**Install:**
+```bash
+curl -fsSL https://raw.githubusercontent.com/Fr4nzz/Termux-Fr4nz/refs/heads/main/termux-scripts/install_claude_telegram_bot_chroot_unattended.sh | bash
+```
+
+**Setup:**
+```bash
+# Authenticate Claude CLI (opens browser):
+ubuntu-chroot claude auth login
+```
+
+**Usage:**
+```bash
+claude-bot            # start bot daemon
+claude-bot --off      # stop bot daemon
+claude-bot --status   # check if running
+claude-bot --log      # tail the log
 ```
 
 ---

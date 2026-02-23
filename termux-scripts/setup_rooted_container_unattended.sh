@@ -58,6 +58,13 @@ cat >"$PREFIX/bin/ubuntu-chroot" <<'SH'
 C="$HOME/containers/ubuntu-chroot"
 TP="$PREFIX/tmp/.X11-unix"; [ -d "$TP" ] || mkdir -p "$TP"
 
+# Bind-mount sdcard into container rootfs (persists on host, survives chroot re-entry).
+# /sdcard is FUSE which rurima can't bind-mount; use the f2fs pass-through path.
+SDMNT="$C/mnt/sdcard"
+sudo mkdir -p "$SDMNT" 2>/dev/null
+sudo mountpoint -q "$SDMNT" 2>/dev/null || \
+  sudo mount --bind /mnt/pass_through/0/emulated/0 "$SDMNT" 2>/dev/null || true
+
 # Parse --user flag
 U="root"
 if [ "$1" = "--user" ]; then
@@ -73,7 +80,6 @@ unset SHELL ZDOTDIR ZSH OH_MY_ZSH
 if [ ! -t 0 ]; then
   exec sudo rurima r \
     -m "$TP" /tmp/.X11-unix \
-    -m /sdcard /mnt/sdcard \
     "$C" /usr/bin/env -i \
       HOME=/root \
       TERM="${TERM:-xterm-256color}" \
@@ -84,13 +90,11 @@ fi
 # No args -> interactive (bash, .bashrc auto-launches zsh)
 [ "$#" -eq 0 ] && exec sudo rurima r \
   -m "$TP" /tmp/.X11-unix \
-  -m /sdcard /mnt/sdcard \
   "$C" /bin/su - "$U" -s /bin/bash
 
 # Command - use simple env approach
 exec sudo rurima r \
   -m "$TP" /tmp/.X11-unix \
-  -m /sdcard /mnt/sdcard \
   "$C" /usr/bin/env PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin HOME=/root \
   "$@"
 SH

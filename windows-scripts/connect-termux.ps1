@@ -73,10 +73,18 @@ if ($found.Count -gt 1) {
 
 Write-Host "Found Termux at $target" -ForegroundColor Green
 
+# --- Save discovered IP for quick-connect alias ---
+$cacheDir = "$env:USERPROFILE\.termux"
+if (-not (Test-Path $cacheDir)) { New-Item -ItemType Directory -Path $cacheDir -Force | Out-Null }
+Set-Content -Path "$cacheDir\last-ip" -Value $target -NoNewline
+Write-Host "Saved IP to ~/.termux/last-ip (use 'termux' alias to reconnect)" -ForegroundColor DarkGray
+
 # --- Prompt for username if not given ---
 if (-not $User) {
     $User = Read-Host "Termux username (run 'whoami' on phone)"
 }
+
+Set-Content -Path "$cacheDir\last-user" -Value $User -NoNewline
 
 # --- Ensure SSH key is set up ---
 $keyPath = "$env:USERPROFILE\.ssh\id_ed25519"

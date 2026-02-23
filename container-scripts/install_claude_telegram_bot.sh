@@ -11,11 +11,11 @@ INSTALL_DIR="/opt/claude-telegram-bot"
 
 say(){ printf "\n[%s] %s\n" "$1" "$2"; }
 
-say "1/5" "Install dependencies..."
+say "1/6" "Install dependencies..."
 apt-get update -qq
-apt-get install -y -qq curl ca-certificates unzip git nodejs npm sudo
+apt-get install -y -qq curl ca-certificates unzip git nodejs npm sudo openssh-client
 
-say "2/5" "Create '$BOT_USER' user..."
+say "2/6" "Create '$BOT_USER' user..."
 if id "$BOT_USER" &>/dev/null; then
   echo "  User '$BOT_USER' already exists."
 else
@@ -23,7 +23,7 @@ else
   echo "  User '$BOT_USER' created."
 fi
 
-say "3/5" "Install Bun runtime (as $BOT_USER)..."
+say "3/6" "Install Bun runtime (as $BOT_USER)..."
 sudo -u "$BOT_USER" bash -c '
   if command -v bun >/dev/null 2>&1; then
     echo "  Bun already installed: $(bun --version)"
@@ -35,7 +35,7 @@ sudo -u "$BOT_USER" bash -c '
   fi
 '
 
-say "4/5" "Install Claude CLI (as $BOT_USER)..."
+say "4/6" "Install Claude CLI (as $BOT_USER)..."
 sudo -u "$BOT_USER" bash -c '
   export BUN_INSTALL="$HOME/.bun"
   export PATH="$HOME/.npm-global/bin:$HOME/.local/bin:$BUN_INSTALL/bin:/usr/local/bin:/usr/bin:/bin"
@@ -51,7 +51,7 @@ sudo -u "$BOT_USER" bash -c '
   fi
 '
 
-say "5/5" "Clone and set up claude-telegram-bot..."
+say "5/6" "Clone and set up claude-telegram-bot..."
 if [ -d "$INSTALL_DIR" ]; then
   echo "  Updating existing installation..."
   cd "$INSTALL_DIR"
@@ -90,6 +90,29 @@ chown "$BOT_USER":"$BOT_USER" /tmp/telegram-bot
 
 # Symlink sdcard into claude's home so Claude Code can access phone files
 ln -sfn /mnt/sdcard "/home/$BOT_USER/sdcard"
+
+say "6/6" "Set up Termux SSH bridge..."
+# Generate SSH key for claude user (used to SSH back to Termux host)
+if [ ! -f "/home/$BOT_USER/.ssh/id_ed25519" ]; then
+  mkdir -p "/home/$BOT_USER/.ssh"
+  ssh-keygen -t ed25519 -f "/home/$BOT_USER/.ssh/id_ed25519" -N "" -q
+  chown -R "$BOT_USER":"$BOT_USER" "/home/$BOT_USER/.ssh"
+  chmod 700 "/home/$BOT_USER/.ssh"
+  chmod 600 "/home/$BOT_USER/.ssh/id_ed25519"
+fi
+
+# Store Termux username (written by the Termux-side installer via /etc/termux-user)
+# Create the termux wrapper script
+cat >/usr/local/bin/termux <<'WRAPPER'
+#!/bin/bash
+# Run commands in the Termux host environment from inside the chroot.
+# Usage: termux <command>    e.g.  termux pkg install python
+#        termux               (interactive Termux shell)
+TUSER=$(cat /etc/termux-user 2>/dev/null || echo u0_a598)
+exec ssh -o StrictHostKeyChecking=no -o BatchMode=yes -o LogLevel=ERROR \
+  -i /home/claude/.ssh/id_ed25519 -p 8022 "$TUSER@127.0.0.1" "$@"
+WRAPPER
+chmod 755 /usr/local/bin/termux
 
 echo ""
 echo "claude-telegram-bot installed at $INSTALL_DIR"

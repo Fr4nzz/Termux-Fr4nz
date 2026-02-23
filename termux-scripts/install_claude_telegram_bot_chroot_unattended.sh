@@ -13,6 +13,24 @@ fi
 curl -fsSL https://raw.githubusercontent.com/Fr4nzz/Termux-Fr4nz/refs/heads/main/container-scripts/install_claude_telegram_bot.sh \
   | ubuntu-chroot
 
+# Store Termux username inside chroot so the termux wrapper knows who to SSH as
+ubuntu-chroot bash -c "echo $(whoami) > /etc/termux-user"
+
+# Authorize the chroot claude user's SSH key for Termux access
+PUBKEY=$(ubuntu-chroot bash -c 'cat /home/claude/.ssh/id_ed25519.pub 2>/dev/null')
+if [ -n "$PUBKEY" ]; then
+  mkdir -p ~/.ssh
+  if ! grep -qF "$(echo "$PUBKEY" | awk '{print $2}')" ~/.ssh/authorized_keys 2>/dev/null; then
+    echo "$PUBKEY" >> ~/.ssh/authorized_keys
+    echo "[*] SSH key authorized for Termux access from chroot."
+  fi
+fi
+
+# Deploy CLAUDE.md for Claude Code context
+REPO_RAW="https://raw.githubusercontent.com/Fr4nzz/Termux-Fr4nz/refs/heads/main"
+curl -fsSL "$REPO_RAW/container-scripts/CLAUDE.md" \
+  | ubuntu-chroot bash -c 'cat > /home/claude/CLAUDE.md && chown claude:claude /home/claude/CLAUDE.md'
+
 # Write .env with user's Telegram config
 ubuntu-chroot bash -c 'cat > /opt/claude-telegram-bot/.env && chown claude:claude /opt/claude-telegram-bot/.env' <<'ENV'
 TELEGRAM_BOT_TOKEN=your_bot_token_here
@@ -42,6 +60,7 @@ case "${1:-start}" in
         echo "Not running (stale pidfile)."
       fi
       rm -f "$PIDFILE"
+      termux-wake-unlock 2>/dev/null || true
     else
       echo "Claude bot is not running."
     fi
@@ -67,6 +86,8 @@ case "${1:-start}" in
       exit 0
     fi
     mkdir -p "$(dirname "$PIDFILE")" "$(dirname "$LOGFILE")"
+    # Acquire wake lock to prevent Android/MIUI from killing Termux
+    termux-wake-lock 2>/dev/null || true
     ubuntu-chroot su - claude -c '
       export BUN_INSTALL="$HOME/.bun"
       export PATH="$HOME/.local/bin:$BUN_INSTALL/bin:/usr/local/bin:/usr/bin:/bin"

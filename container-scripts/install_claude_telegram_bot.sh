@@ -91,6 +91,12 @@ chown "$BOT_USER":"$BOT_USER" /tmp/telegram-bot
 # Symlink sdcard into claude's home so Claude Code can access phone files
 ln -sfn /mnt/sdcard "/home/$BOT_USER/sdcard"
 
+# Configure passwordless sudo for claude (suid tmpfs is mounted by ubuntu-chroot wrapper)
+if [ ! -f /etc/sudoers.d/claude ]; then
+  echo "$BOT_USER ALL=(ALL) NOPASSWD: ALL" > /etc/sudoers.d/claude
+  chmod 440 /etc/sudoers.d/claude
+fi
+
 say "6/6" "Set up Termux SSH bridge..."
 # Generate SSH key for claude user (used to SSH back to Termux host)
 if [ ! -f "/home/$BOT_USER/.ssh/id_ed25519" ]; then

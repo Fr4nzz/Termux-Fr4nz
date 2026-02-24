@@ -65,6 +65,17 @@ sudo mkdir -p "$SDMNT" 2>/dev/null
 sudo mountpoint -q "$SDMNT" 2>/dev/null || \
   sudo mount --bind /mnt/pass_through/0/emulated/0 "$SDMNT" 2>/dev/null || true
 
+# Mount tmpfs with suid support so sudo works inside the chroot.
+# The underlying /data partition is nosuid, so we need a separate mount.
+SUID="$C/usr/local/suid"
+sudo mkdir -p "$SUID" 2>/dev/null
+sudo mountpoint -q "$SUID" 2>/dev/null || {
+  sudo mount -t tmpfs tmpfs "$SUID" -o mode=0755
+  sudo cp "$C/usr/bin/sudo" "$SUID/sudo"
+  sudo chmod u+s "$SUID/sudo"
+  sudo ln -sf /usr/local/suid/sudo "$C/usr/local/bin/sudo"
+}
+
 # Parse --user flag
 U="root"
 if [ "$1" = "--user" ]; then

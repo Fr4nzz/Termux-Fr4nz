@@ -32,6 +32,7 @@ curl -fsSL "$REPO_RAW/container-scripts/CLAUDE.md" \
   | ubuntu-chroot bash -c 'cat > /home/claude/CLAUDE.md && chown claude:claude /home/claude/CLAUDE.md'
 
 # Write .env with user's Telegram config
+# TODO: Replace with your own values from @BotFather and @userinfobot
 ubuntu-chroot bash -c 'cat > /opt/claude-telegram-bot/.env && chown claude:claude /opt/claude-telegram-bot/.env' <<'ENV'
 TELEGRAM_BOT_TOKEN=your_bot_token_here
 TELEGRAM_ALLOWED_USERS=your_telegram_user_id

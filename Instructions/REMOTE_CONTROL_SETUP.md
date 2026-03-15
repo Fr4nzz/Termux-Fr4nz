@@ -99,12 +99,30 @@ Host termux
 
 ---
 
-## 4. Usage
+## 4. Shell Wrapper (Auto-start sshd)
+
+Add this to `~/.zshrc` on Termux so `sshd` starts automatically before connecting:
+
+```zsh
+# ----- Claw tunnel: start sshd + connect with reverse tunnel -----
+claw-tunnel() {
+  pgrep -x sshd > /dev/null || sshd
+  ssh claw-tunnel
+}
+```
+
+This way you just type `claw-tunnel` and it handles everything.
+
+---
+
+## 5. Usage
 
 ### From Termux — connect and open tunnel:
 ```bash
-ssh claw-tunnel
+claw-tunnel
 ```
+
+> This starts `sshd` if needed, then connects with the reverse tunnel.
 
 ### From the Linux server — SSH back to the phone (while tunnel is active):
 ```bash
@@ -120,7 +138,7 @@ While `ssh claw-tunnel` is running, open **aVNC** on your phone:
 
 ---
 
-## 5. Phone Control Tools
+## 6. Phone Control Tools
 
 ### Installed packages
 
@@ -196,7 +214,7 @@ Common key events: `KEYCODE_HOME`, `KEYCODE_BACK`, `KEYCODE_ENTER`, `KEYCODE_MEN
 
 ---
 
-## 6. Putting It All Together
+## 7. Putting It All Together
 
 With the tunnel active, a Claude Code instance on the server can:
 
@@ -222,7 +240,7 @@ ssh termux "adb shell input tap 350 800"
 
 ---
 
-## 7. Keep the Tunnel Alive
+## 8. Keep the Tunnel Alive
 
 To prevent the tunnel from dying when the phone sleeps:
 

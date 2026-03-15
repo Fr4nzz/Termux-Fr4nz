@@ -14,6 +14,7 @@ Scripts for setting up Termux and running Linux containers with development envi
 - [AI Assistant (ZeroClaw)](#ai-assistant-zeroclaw)
 - [Claude Telegram Bot](#claude-telegram-bot)
 - [Additional Tools](#additional-tools)
+- [Remote Control (Claude Code)](#remote-control-claude-code)
 - [Troubleshooting](#troubleshooting)
 
 ---
@@ -336,6 +337,16 @@ curl -fsSL https://raw.githubusercontent.com/Fr4nzz/Termux-Fr4nz/refs/heads/main
 
 ---
 
+## Remote Control (Claude Code)
+
+Let a remote Claude Code instance control your phone via SSH reverse tunnel + ADB + Termux:API. No Tailscale needed after initial setup.
+
+**Capabilities:** screenshots, tap/swipe/type, open apps, read notifications, dump UI, clipboard, camera, SMS, TTS, sensors, and more.
+
+📖 **Full guide:** [REMOTE_CONTROL_SETUP.md](./Instructions/REMOTE_CONTROL_SETUP.md)
+
+---
+
 ## Troubleshooting
 
 ### Repair APT
@@ -379,6 +390,7 @@ rurima lxc list
 - **R Installation:** [INSTALL_R_BINARIES.md](./Instructions/INSTALL_R_BINARIES.md)
 - **RStudio Server:** [INSTALL_RStudio_Server.md](./Instructions/INSTALL_RStudio_Server.md)
 - **SSH from Windows:** [WINDOWS_SSH.md](./Instructions/WINDOWS_SSH.md)
+- **Remote Control (Claude Code ↔ Phone):** [REMOTE_CONTROL_SETUP.md](./Instructions/REMOTE_CONTROL_SETUP.md)
 
 ---
 

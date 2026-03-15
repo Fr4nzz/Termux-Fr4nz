@@ -176,12 +176,14 @@ adb connect localhost:5555
 | Screen size | `adb shell wm size` |
 | Dump UI tree | `adb shell uiautomator dump && adb shell cat /sdcard/window_dump.xml` |
 | Notifications | `adb shell dumpsys notification` |
-| Volume | `adb shell media volume --set N` |
+| Set volume | `adb shell cmd media_session volume --stream 3 --set N` |
 | Install APK | `adb install /path/to/app.apk` |
 | File system | Full root access via `su` |
 | Clipboard get | `adb shell su -c "service call clipboard 2 i32 1 i32 0"` |
 
 Common key events: `KEYCODE_HOME`, `KEYCODE_BACK`, `KEYCODE_ENTER`, `KEYCODE_MENU`, `KEYCODE_VOLUME_UP`, `KEYCODE_VOLUME_DOWN`, `KEYCODE_POWER`, `KEYCODE_TAB`, `KEYCODE_DEL`.
+
+Volume stream IDs: `3` = music/media, `2` = ring, `1` = system, `4` = alarm, `5` = notification. Max value is typically 15.
 
 #### Via Termux:API
 

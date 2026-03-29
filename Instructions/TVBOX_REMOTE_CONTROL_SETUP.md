@@ -308,6 +308,56 @@ Doesn't matter — the TV box initiates the outbound SSH tunnel, so its LAN IP i
 
 ---
 
+## Termux API (via ADB)
+
+Termux API commands can be run from the Oracle VM through ADB using a helper script at `/data/local/ssh/termux-run.sh`:
+
+```bash
+# Pattern: run-as com.termux /data/local/ssh/termux-run.sh <command> [args]
+adb -s localhost:15555 shell "run-as com.termux /data/local/ssh/termux-run.sh termux-battery-status"
+adb -s localhost:15555 shell "run-as com.termux /data/local/ssh/termux-run.sh termux-wifi-connectioninfo"
+adb -s localhost:15555 shell "run-as com.termux /data/local/ssh/termux-run.sh termux-tts-speak hello"
+adb -s localhost:15555 shell "run-as com.termux /data/local/ssh/termux-run.sh termux-notification --title Hi --content Hello"
+```
+
+### What works on Android TV
+
+| Command | Status | Notes |
+|---------|--------|-------|
+| `termux-battery-status` | ✅ | Returns JSON (TV box has no battery, values are 0) |
+| `termux-wifi-connectioninfo` | ✅ | Returns SSID, IP, signal strength, etc. |
+| `termux-tts-speak` | ✅ | Text-to-speech through TV speakers (needs speaker connected) |
+| `termux-notification` | ✅ | Android TV notifications |
+| `termux-wifi-scaninfo` | ✅ | Scan nearby WiFi networks |
+| `termux-toast` | ❌ | Android TV doesn't show toasts from background apps |
+| `termux-clipboard-set/get` | ❌ | Returns empty on Android TV |
+
+### Setup already done
+
+- Termux + Termux:API + openssh installed
+- All runtime permissions granted to `com.termux.api` via `pm grant`
+- Special permissions (SYSTEM_ALERT_WINDOW, WRITE_SETTINGS, MANAGE_EXTERNAL_STORAGE) granted via `appops`
+- Termux whitelisted from battery optimization
+- Wake lock acquired via `termux-wake-lock`
+- Helper script at `/data/local/ssh/termux-run.sh` sets up PATH and LD_LIBRARY_PATH for Termux binaries
+- Termux sshd auto-starts on boot via the tunnel init script
+- Reverse tunnel also forwards Termux SSH: port 18022 on Oracle VM → port 8022 on TV box
+
+### Direct Termux SSH (alternative to ADB run-as)
+
+For more complex Termux operations, SSH directly into Termux:
+
+```bash
+# From Oracle VM (SSH config alias already set up):
+ssh tvbox-termux "termux-battery-status"
+ssh tvbox-termux "termux-wifi-connectioninfo"
+ssh tvbox-termux "pkg list-installed"
+```
+
+This gives a full Termux shell with all packages and environment available.
+
+---
+
 ## Key Files on TV Box
 
 | Path | Purpose |
@@ -319,6 +369,7 @@ Doesn't matter — the TV box initiates the outbound SSH tunnel, so its LAN IP i
 | `/data/local/ssh/known_hosts` | Oracle VM host key |
 | `/data/local/ssh/tunnel.sh` | Tunnel script (reconnecting loop) |
 | `/data/local/ssh/tunnel.log` | Tunnel log file |
+| `/data/local/ssh/termux-run.sh` | Helper to run Termux commands via ADB |
 | `/system/etc/init/ssh_tunnel.rc` | Init service (triggers on boot) |
 
 ## Key Files on Oracle VM

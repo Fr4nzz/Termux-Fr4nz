@@ -609,7 +609,7 @@ REGISTER_PAYLOAD = {
 | Set volume | `ssap://audio/setVolume` | `{"volume": 15}` |
 | Mute/unmute | `ssap://audio/setMute` | `{"mute": true}` |
 | Turn off TV | `ssap://system/turnOff` | `{}` |
-| Turn on TV | CEC from TV box | `adb shell su 0 cmd hdmi_control onetouchplay` (untested — WOL doesn't work on this TV) |
+| Turn on TV | CEC from TV box | `adb shell su 0 cmd hdmi_control onetouchplay` (reports "timed out" but works — ignore error) |
 | List inputs | `ssap://tv/getExternalInputList` | `{}` |
 | Get foreground app | `ssap://com.webos.applicationManager/getForegroundAppInfo` | `{}` |
 | Launch app | `ssap://system.launcher/launch` | `{"id": "com.webos.app.browser"}` |

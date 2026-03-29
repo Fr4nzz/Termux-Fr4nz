@@ -423,10 +423,28 @@ adb shell input keyevent 88   # MEDIA_PREVIOUS
 
 ### AI Assistant Workflow
 
-1. **Search**: Query Cinemeta API with `curl` to get IMDB ID — no UI needed
-2. **Open**: Send `stremio:///detail/movie/{imdb_id}/{imdb_id}` via ADB intent
-3. **Play**: Wait 3s, press DPAD_CENTER (keyevent 23) to start playback
-4. **Control**: Use media key events for play/pause/seek
+1. **Launch Stremio first** (required for streaming server on port 11470):
+   ```bash
+   adb -s localhost:15555 shell monkey -p com.stremio.one -c android.intent.category.LAUNCHER 1
+   sleep 5
+   ```
+2. **Search**: Query Cinemeta API with `curl` to get IMDB ID — no UI needed
+3. **Get stream**: Query addon API for torrent hash, build URL: `http://127.0.0.1:11470/{infoHash}/{fileIdx}`
+4. **Play in mpv** (right-aligned for dead TV panel):
+   ```bash
+   adb -s localhost:15555 shell am start -a android.intent.action.VIEW \
+     -d "http://127.0.0.1:11470/HASH/INDEX" -n is.xyz.mpv/.MPVActivity
+   ```
+5. **Control**: Use media key events for play/pause/seek
+
+> **Important:** Stremio must be running for torrent streams to work. The streaming server at `127.0.0.1:11470` resolves torrent hashes to HTTP streams. If mpv fails to play, launch Stremio first.
+
+### Performance Notes
+
+- mpv uses `hwdec=no` (software decoding) for the right-aligned display offset — this is slightly less smooth than hardware decoding on the RK3528
+- Prefer **x264** streams over x265/HEVC (x264 is faster to software decode)
+- 720p streams play smoother but may have fewer seeders
+- For smooth playback without offset, use Stremio's built-in player (centered)
 
 ### stremio-mcp (Optional MCP Server)
 
@@ -794,6 +812,16 @@ adb shell input keyevent KEYCODE_DPAD_CENTER              # Open search
 sleep 1
 adb shell input text "relaxing%smusic"                   # Type search query
 adb shell input keyevent KEYCODE_ENTER                    # Search
+```
+
+### scrcpy (Mirror TV box to PC)
+
+```bash
+# Mirror screen to PC, keep audio on TV
+scrcpy --serial 192.168.100.16:5555 --no-audio
+
+# Mirror with audio on both PC and TV
+scrcpy --serial 192.168.100.16:5555 --audio-dup
 ```
 
 ### Monitoring what's on screen

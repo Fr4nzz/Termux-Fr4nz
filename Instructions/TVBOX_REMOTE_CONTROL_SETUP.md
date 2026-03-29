@@ -597,21 +597,50 @@ asyncio.run(f())
 
 ---
 
-## Display Fix
+## Display Fix (Dead Left ~25% of TV Panel)
 
-The TV's left ~30% is dead/black. The display is resized to fit the working area:
+The TV's left ~25% (480px) is dead/black. Video playback is handled by **mpv-android** with right-alignment to avoid the dead zone.
 
-```bash
-# Applied on TV box (persists across reboots):
-wm size 1344x1080
-wm density 213
+### mpv-android Configuration
 
-# To reset:
-wm size reset
-wm density reset
+Package: `is.xyz.mpv` — config persists at `/data/data/is.xyz.mpv/files/mpv.conf`
+
+```ini
+hwdec=no
+video-zoom=-0.415
+video-align-x=1
+keepaspect=yes
 ```
 
-This centers content in 70% of the screen (loses ~15% on each side). A proper left-offset fix isn't possible on Android TV 13 (`wm overscan` was removed).
+- `video-zoom=-0.415` — shrinks video to 75% (log2(0.75) = -0.415), fitting the visible area
+- `video-align-x=1` — pushes video flush to the right edge
+- `hwdec=no` — required for video-align-x/video-zoom to work (software decoding)
+- Result: 1440x810 video right-aligned, black padding over the dead zone, no content lost
+
+To adjust for different dead zone sizes:
+- 20% dead: `video-zoom=-0.322`
+- 25% dead: `video-zoom=-0.415`
+- 30% dead: `video-zoom=-0.515`
+
+### Playing Videos Through mpv (AI Assistant Workflow)
+
+**YouTube via mpv (right-aligned):**
+```bash
+adb -s localhost:15555 shell am start -a android.intent.action.VIEW \
+  -d "https://www.youtube.com/watch?v=VIDEO_ID" \
+  -n is.xyz.mpv/.MPVActivity
+```
+
+**Stremio content via mpv:** Configure Stremio to use mpv as external player (Settings > Player), or launch mpv directly with a stream URL.
+
+**Direct URL in mpv:**
+```bash
+adb -s localhost:15555 shell am start -a android.intent.action.VIEW \
+  -d "URL_HERE" \
+  -n is.xyz.mpv/.MPVActivity
+```
+
+> **Note:** SmartTube and Stremio's built-in players render centered (no offset). For content to appear on the visible area of the TV, always route playback through mpv.
 
 ---
 

@@ -604,7 +604,7 @@ REGISTER_PAYLOAD = {
 | Set volume | `ssap://audio/setVolume` | `{"volume": 15}` |
 | Mute/unmute | `ssap://audio/setMute` | `{"mute": true}` |
 | Turn off TV | `ssap://system/turnOff` | `{}` |
-| Turn on TV | Wake-on-LAN | MAC: `b4:b2:91:00:9e:80` (enable "Mobile TV On" in TV settings) |
+| Turn on TV | CEC from TV box | `adb shell su 0 cmd hdmi_control onetouchplay` (untested — WOL doesn't work on this TV) |
 | List inputs | `ssap://tv/getExternalInputList` | `{}` |
 | Get foreground app | `ssap://com.webos.applicationManager/getForegroundAppInfo` | `{}` |
 | Launch app | `ssap://system.launcher/launch` | `{"id": "com.webos.app.browser"}` |

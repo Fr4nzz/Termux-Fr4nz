@@ -250,7 +250,7 @@ dumpsys power | grep "Display Power"
 
 | App | Package |
 |-----|---------|
-| SmartTube (YouTube) | `com.liskovsoft.smarttubetv.beta` |
+| SmartTube (YouTube) | `org.smarttube.stable` |
 | YouTube TV | `com.google.android.youtube.tv` |
 | Netflix | `com.netflix.ninja` |
 | Disney+ | `com.disney.disneyplus` |
@@ -361,6 +361,25 @@ ssh tvbox-termux "pkg list-installed"
 ```
 
 This gives a full Termux shell with all packages and environment available.
+
+---
+
+## Quick Reference: AI Assistant Media Playback
+
+| Content | App | Display Offset | Command |
+|---------|-----|---------------|---------|
+| **Movies/Shows** (right-aligned) | mpv via Stremio | ✅ `video-align-x=1` | Search Cinemeta API → get stream from Torrentio → play in mpv |
+| **Movies/Shows** (smooth, centered) | Stremio built-in | ❌ centered | Deep link: `stremio:///detail/movie/{imdb_id}/{imdb_id}` → press OK |
+| **YouTube** (right-aligned) | mpv | ✅ `video-align-x=1` | `am start -d "URL" -n is.xyz.mpv/.MPVActivity` |
+| **YouTube** (smooth, centered) | SmartTube | ❌ centered | `am start -d "https://youtube.com/watch?v=ID" -n org.smarttube.stable/...SplashActivity` |
+
+> **Right-aligned (mpv)**: Uses software decoding (`hwdec=no`) — slightly less smooth but video avoids dead TV zone.
+> **Centered (native apps)**: Uses hardware decoding — smooth but left ~25% of content is in the dead zone.
+> The AI assistant should ask the user which mode they prefer, or default to mpv for the best viewing experience.
+
+### YouTube via Stremio?
+
+Stremio does NOT support YouTube. Use SmartTube or mpv for YouTube content. For movies/shows, use Stremio's addon API.
 
 ---
 

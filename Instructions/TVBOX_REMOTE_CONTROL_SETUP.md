@@ -18,7 +18,11 @@ Control an Android TV box from a remote Linux server (Oracle Cloud) via ADB + sc
 
 ### On the TV Box
 
-1. **ADB over TCP** auto-enables on boot via init script (`setprop service.adb.tcp.port 5555 && stop adbd && start adbd`)
+1. **ADB over TCP** permanently enabled on port 5555 via three mechanisms:
+   - `/system/build.prop`: `service.adb.tcp.port=5555` + `persist.adb.tcp.port=5555` + `persist.service.adb.enable=1`
+   - `/system/etc/init/adb_tcp.rc`: restarts adbd with TCP on `sys.boot_completed=1` using `setprop ctl.restart adbd`
+   - Settings database: `adb_enabled=1`, `adb_wifi_enabled=1`
+   - ADB keys pre-authorized for both Oracle VM and Windows PC in `/data/misc/adb/adb_keys`
 
 2. **Termux** installed (v0.118.3) with openssh package
 
@@ -286,12 +290,13 @@ adb connect localhost:15555
 ```
 
 ### ADB port 5555 not listening on TV box
-The init script runs `setprop service.adb.tcp.port 5555 && stop adbd && start adbd`. If this fails:
+ADB TCP is permanently configured via `/system/build.prop` and should auto-start. If it ever fails:
 ```bash
-# Manually enable from ADB shell (if you have LAN access):
-adb shell su 0 setprop service.adb.tcp.port 5555
-adb shell su 0 stop adbd
-adb shell su 0 start adbd
+# Re-apply the fix (requires root):
+adb shell su 0 mount -o remount,rw /system
+adb shell su 0 sh /sdcard/fix_adb.sh
+adb shell su 0 mount -o remount,ro /system
+adb reboot
 ```
 
 ### TV box IP changed (DHCP)
@@ -657,7 +662,9 @@ asyncio.run(f())
 | `/data/local/ssh/tunnel.sh` | Tunnel script (reconnecting loop) |
 | `/data/local/ssh/tunnel.log` | Tunnel log file |
 | `/data/local/ssh/termux-run.sh` | Helper to run Termux commands via ADB |
-| `/system/etc/init/ssh_tunnel.rc` | Init service (triggers on boot) |
+| `/system/etc/init/ssh_tunnel.rc` | Init service — SSH tunnel (triggers on boot) |
+| `/system/etc/init/adb_tcp.rc` | Init service — ADB TCP on port 5555 |
+| `/sdcard/fix_adb.sh` | Script to re-apply ADB TCP fix if needed |
 
 ## Key Files on Oracle VM
 

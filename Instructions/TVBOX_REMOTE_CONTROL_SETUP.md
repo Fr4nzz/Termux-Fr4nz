@@ -377,9 +377,9 @@ This gives a full Termux shell with all packages and environment available.
 > **Centered (native apps)**: Uses hardware decoding — smooth but left ~25% of content is in the dead zone.
 > The AI assistant should ask the user which mode they prefer, or default to mpv for the best viewing experience.
 
-### YouTube via Stremio
+### YouTube
 
-Stremio has YouTube addons (built-in YouTube addon, YouTube PRO, YouTubio) but they are limited — channel browsing more than search. For reliable YouTube playback, use SmartTube or mpv directly.
+Stremio's YouTube addons exist but are unreliable. **Use SmartTube or mpv for YouTube.** For right-aligned playback, route YouTube URLs through mpv.
 
 ### Recommended Stremio Addons
 
@@ -387,7 +387,7 @@ Stremio has YouTube addons (built-in YouTube addon, YouTube PRO, YouTubio) but t
 |-------|---------|-------|
 | Cinemeta | Movie/show metadata | Built-in, required for search |
 | Torrentio | Torrent streams | Enable Cinecalidad, set Latino priority |
-| YouTube / YouTubio | YouTube videos | Limited search, channel browsing |
+| ~~YouTube / YouTubio~~ | ~~YouTube videos~~ | Unreliable — use SmartTube instead |
 | Primer Latino | Latino movies/series | Paid (~$2.45/mo), español latino |
 | Latino Movies | Spanish content | Free, dubbed/subtitled |
 | Animeo | Anime | Integrates with Kitsu |

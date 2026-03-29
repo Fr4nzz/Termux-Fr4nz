@@ -640,6 +640,47 @@ adb -s localhost:15555 shell am start -a android.intent.action.VIEW \
   -n is.xyz.mpv/.MPVActivity
 ```
 
+### Audio Language Preference (Latin American Spanish)
+
+mpv is configured to prefer Latin American Spanish audio, then Spain Spanish, then English:
+
+```ini
+alang=es-419,es-MX,es-LA,lat,latino,la,spa-lat,spa-la,spa-mx,es-mx,es-la,es,spa,spanish,eng,en
+slang=es-419,es-MX,es-LA,lat,latino,spa,es,eng,en
+```
+
+### Finding Latino Streams (AI Assistant)
+
+When searching for streams via addon APIs, filter for Latino content:
+
+```bash
+# Filter Torrentio results for Latino streams
+curl -s "https://torrentio.strem.fun/stream/movie/IMDB_ID.json" | \
+  python3 -c "
+import sys,json,re
+d = json.load(sys.stdin)
+pat = re.compile(r'latino|lat[^a-z]|es.la|es.mx|latin', re.IGNORECASE)
+for s in d.get('streams',[]):
+    title = s.get('title','')
+    if pat.search(title):
+        ih = s.get('infoHash','')
+        fi = s.get('fileIdx',0)
+        url = f'http://127.0.0.1:11470/{ih}/{fi}' if ih else s.get('url','')
+        print(f'{title[:80]}')
+        print(f'URL: {url}')
+"
+```
+
+### Recommended Stremio Addons for Latino Content
+
+| Addon | Purpose | Config |
+|-------|---------|--------|
+| Torrentio | Torrents with Cinecalidad provider | `torrentio.strem.fun/configure` — enable Cinecalidad, set Priority Language = Latino |
+| Cuevana/HomeCine | Direct HTTP streams in LATAM Spanish | Search on `stremio-addons.net`, configure with "Latin American Spanish" |
+| AIOStreams | Aggregator with regex filtering | `aiostreams.elfhosted.com/stremio/configure` — set language filter to Latino |
+| Peerflix | Spanish-focused streams | `config.peerflix.mov` |
+| MediaFusion | Alternative torrent indexer | Additional coverage alongside Torrentio |
+
 > **Note:** SmartTube and Stremio's built-in players render centered (no offset). For content to appear on the visible area of the TV, always route playback through mpv.
 
 ---

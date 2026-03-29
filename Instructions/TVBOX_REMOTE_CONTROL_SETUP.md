@@ -313,12 +313,18 @@ Doesn't matter — the TV box initiates the outbound SSH tunnel, so its LAN IP i
 Termux API commands can be run from the Oracle VM through ADB using a helper script at `/data/local/ssh/termux-run.sh`:
 
 ```bash
-# Pattern: run-as com.termux /data/local/ssh/termux-run.sh <command> [args]
+# IMPORTANT: First wake up the Termux:API app silently (no UI, no app switching):
+adb -s localhost:15555 shell "am broadcast -a com.termux.api.ACTION_WAKE_UP -n com.termux.api/.TermuxApiReceiver"
+sleep 2
+
+# Then run commands via: run-as com.termux /data/local/ssh/termux-run.sh <command> [args]
 adb -s localhost:15555 shell "run-as com.termux /data/local/ssh/termux-run.sh termux-battery-status"
 adb -s localhost:15555 shell "run-as com.termux /data/local/ssh/termux-run.sh termux-wifi-connectioninfo"
 adb -s localhost:15555 shell "run-as com.termux /data/local/ssh/termux-run.sh termux-tts-speak hello"
 adb -s localhost:15555 shell "run-as com.termux /data/local/ssh/termux-run.sh termux-notification --title Hi --content Hello"
 ```
+
+> **If Termux API commands hang or timeout**, the API app was killed by Android. Re-send the wake-up broadcast above. This starts the API service silently in the background without opening any visible app or interrupting what's on screen.
 
 ### What works on Android TV
 

@@ -364,6 +364,118 @@ This gives a full Termux shell with all packages and environment available.
 
 ---
 
+## LG TV Control (WebOS SSAP)
+
+The LG TV (75UN8000PSB, WebOS) can be controlled via the SSAP WebSocket API from any device on the LAN. This allows switching inputs, controlling volume, turning the TV on/off, etc.
+
+- **TV IP**: 192.168.100.13
+- **SSAP Port**: 3001 (WSS)
+- **Client Key**: `229c7620d58fbb8bbdf1d3d7b0f7a314` (persists across reboots)
+- **TV Box Input**: HDMI_4
+
+### Connection
+
+The key to getting full permissions is registering with a **full manifest** that requests all permission scopes. Without the manifest, most commands return 401.
+
+```python
+import asyncio, json, ssl, websockets
+
+TV_IP = "192.168.100.13"
+CLIENT_KEY = "229c7620d58fbb8bbdf1d3d7b0f7a314"
+
+# Full manifest for elevated permissions (required for TV control)
+REGISTER_PAYLOAD = {
+    "client-key": CLIENT_KEY,
+    "manifest": {
+        "manifestVersion": 1,
+        "appVersion": "1.1",
+        "signed": {
+            "created": "20140509",
+            "appId": "com.lge.test",
+            "vendorId": "com.lge",
+            "localizedAppNames": {"": "LG Remote"},
+            "localizedVendorNames": {"": "LG Electronics"},
+            "permissions": ["TEST_SECURE","TEST_PROTECTED","CONTROL_POWER","CONTROL_DISPLAY",
+                "CONTROL_INPUT_JOYSTICK","CONTROL_INPUT_MEDIA_RECORDING",
+                "CONTROL_INPUT_MEDIA_PLAYBACK","CONTROL_INPUT_TV",
+                "CONTROL_MOUSE_AND_KEYBOARD","READ_APP_STATUS","READ_CURRENT_CHANNEL",
+                "READ_INPUT_DEVICE_LIST","READ_NETWORK_STATE","READ_RUNNING_APPS",
+                "READ_TV_CURRENT_TIME","READ_TV_CHANNEL_LIST","WRITE_NOTIFICATION_TOAST",
+                "READ_POWER_STATE","READ_COUNTRY_INFO","READ_SETTINGS","CONTROL_TV_SCREEN",
+                "CONTROL_TV_STANBY","CONTROL_FAVORITE_GROUP","CONTROL_USER_INFO",
+                "CHECK_BLUETOOTH_DEVICE","CONTROL_BLUETOOTH","CONTROL_TIMER_INFO",
+                "STB_INTERNAL_CONNECTION","CONTROL_RECORDING","READ_RECORDING_STATE",
+                "WRITE_RECORDING_LIST","READ_RECORDING_LIST","READ_RECORDING_SCHEDULE",
+                "WRITE_RECORDING_SCHEDULE","READ_STORAGE_DEVICE_LIST","READ_TV_PROGRAM_INFO",
+                "CONTROL_BOX_CHANNEL","READ_TV_ACR","READ_TV_CONTENT_STATE",
+                "CONTROL_CHANNEL_BLOCK","CONTROL_CHANNEL_GROUP","CONTROL_TV_POWER",
+                "CREATE_CHANNEL_GROUP","CONTROL_INPUT_TEXT"],
+            "serial": "serial1"
+        },
+        "permissions": ["LAUNCH","LAUNCH_WEBAPP","APP_TO_APP","CONTROL_AUDIO",
+            "CONTROL_DISPLAY","CONTROL_INPUT_JOYSTICK","CONTROL_INPUT_MEDIA_PLAYBACK",
+            "CONTROL_INPUT_MEDIA_RECORDING","CONTROL_INPUT_TV",
+            "CONTROL_MOUSE_AND_KEYBOARD","CONTROL_POWER","READ_APP_STATUS",
+            "READ_CURRENT_CHANNEL","READ_INPUT_DEVICE_LIST","READ_NETWORK_STATE",
+            "READ_RUNNING_APPS","READ_TV_CHANNEL_LIST","READ_TV_CURRENT_TIME",
+            "WRITE_NOTIFICATION_TOAST","CONTROL_TV_SCREEN","READ_SETTINGS","WRITE_SETTINGS"],
+        "signatures": [{"signatureVersion":1,"signature":""}]
+    }
+}
+```
+
+> **Note**: If the client key stops working, register with an empty `client-key` in the payload above. The TV will show a pairing prompt — accept it to get a new key.
+
+### Available SSAP Commands
+
+| Command | URI | Payload |
+|---------|-----|---------|
+| Switch to TV box | `ssap://tv/switchInput` | `{"inputId": "HDMI_4"}` |
+| Switch to Live TV | `ssap://system.launcher/launch` | `{"id": "com.webos.app.livetv"}` |
+| Get volume | `ssap://audio/getVolume` | `{}` |
+| Set volume | `ssap://audio/setVolume` | `{"volume": 15}` |
+| Mute/unmute | `ssap://audio/setMute` | `{"mute": true}` |
+| Turn off TV | `ssap://system/turnOff` | `{}` |
+| List inputs | `ssap://tv/getExternalInputList` | `{}` |
+| Get foreground app | `ssap://com.webos.applicationManager/getForegroundAppInfo` | `{}` |
+| Launch app | `ssap://system.launcher/launch` | `{"id": "com.webos.app.browser"}` |
+| Show toast | `ssap://system.notifications/createToast` | `{"message": "Hello"}` |
+
+### Quick CLI Usage
+
+```bash
+# One-liner to switch TV to TV box input
+python -c "
+import asyncio,json,ssl,websockets
+async def f():
+    s=ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT);s.check_hostname=False;s.verify_mode=ssl.CERT_NONE
+    w=await websockets.connect('wss://192.168.100.13:3001',ssl=s)
+    await w.send(json.dumps({'type':'register','payload':{'client-key':'229c7620d58fbb8bbdf1d3d7b0f7a314'}}))
+    await w.recv()
+    await w.send(json.dumps({'id':'1','type':'request','uri':'ssap://tv/switchInput','payload':{'inputId':'HDMI_4'}}))
+    print(await asyncio.wait_for(w.recv(),timeout=5))
+asyncio.run(f())
+"
+```
+
+### HDMI Inputs
+
+| ID | Label | Status |
+|----|-------|--------|
+| HDMI_1 | HDMI 1 | Disconnected |
+| HDMI_2 | HDMI 2 | Disconnected |
+| HDMI_3 | HDMI 3 | Disconnected |
+| HDMI_4 | HDMI 4 | **TV Box (connected)** |
+
+### SSH Access (Developer Mode)
+
+- SSH port: 9922, user: `prisoner`
+- Key: decrypt `/var/luna/preferences/webos_rsa` with passphrase from Developer Mode app
+- `luna-send` needs root (permission denied), `luna-send-pub` has limited access
+- Useful for reading `/var/luna/preferences/*` settings files
+
+---
+
 ## Key Files on TV Box
 
 | Path | Purpose |

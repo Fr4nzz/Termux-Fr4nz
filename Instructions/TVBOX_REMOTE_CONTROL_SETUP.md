@@ -603,7 +603,8 @@ REGISTER_PAYLOAD = {
 | Get volume | `ssap://audio/getVolume` | `{}` |
 | Set volume | `ssap://audio/setVolume` | `{"volume": 15}` |
 | Mute/unmute | `ssap://audio/setMute` | `{"mute": true}` |
-| Turn off TV | `ssap://system/turnOff` | `{}` | **WARNING: Don't use — Dev Mode session expires on power off** |
+| Turn off TV | `ssap://system/turnOff` | `{}` |
+| Turn on TV | Wake-on-LAN | MAC: `b4:b2:91:00:9e:80` (enable "Mobile TV On" in TV settings) |
 | List inputs | `ssap://tv/getExternalInputList` | `{}` |
 | Get foreground app | `ssap://com.webos.applicationManager/getForegroundAppInfo` | `{}` |
 | Launch app | `ssap://system.launcher/launch` | `{"id": "com.webos.app.browser"}` |

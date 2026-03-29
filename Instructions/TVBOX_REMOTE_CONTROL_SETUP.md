@@ -379,7 +379,26 @@ This gives a full Termux shell with all packages and environment available.
 
 ### YouTube
 
-Stremio's YouTube addons exist but are unreliable. **Use SmartTube or mpv for YouTube.** For right-aligned playback, route YouTube URLs through mpv.
+**Do NOT use Stremio for YouTube** — its search only finds movies/shows, not YouTube videos. Use **SmartTube** for YouTube:
+
+```bash
+# Search YouTube (opens SmartTube with results)
+adb shell am start -a android.intent.action.VIEW \
+  -d "https://www.youtube.com/results?search_query=QUERY+HERE" \
+  -n org.smarttube.stable/com.liskovsoft.smartyoutubetv2.tv.ui.main.SplashActivity
+
+# Play specific video
+adb shell am start -a android.intent.action.VIEW \
+  -d "https://www.youtube.com/watch?v=VIDEO_ID" \
+  -n org.smarttube.stable/com.liskovsoft.smartyoutubetv2.tv.ui.main.SplashActivity
+
+# For right-aligned playback, route through mpv instead:
+adb shell am start -a android.intent.action.VIEW \
+  -d "https://www.youtube.com/watch?v=VIDEO_ID" \
+  -n is.xyz.mpv/.MPVActivity
+```
+
+The AI assistant can extract search results from SmartTube via UI snapshots (`uiautomator dump`) to find video titles and select content.
 
 ### Recommended Stremio Addons
 
@@ -387,7 +406,7 @@ Stremio's YouTube addons exist but are unreliable. **Use SmartTube or mpv for Yo
 |-------|---------|-------|
 | Cinemeta | Movie/show metadata | Built-in, required for search |
 | Torrentio | Torrent streams | Enable Cinecalidad, set Latino priority |
-| ~~YouTube / YouTubio~~ | ~~YouTube videos~~ | Unreliable — use SmartTube instead |
+| ~~YouTube / YouTubio~~ | ~~YouTube~~ | Don't use — Stremio can't search YouTube. Use SmartTube |
 | Primer Latino | Latino movies/series | Paid (~$2.45/mo), español latino |
 | Latino Movies | Spanish content | Free, dubbed/subtitled |
 | Animeo | Anime | Integrates with Kitsu |

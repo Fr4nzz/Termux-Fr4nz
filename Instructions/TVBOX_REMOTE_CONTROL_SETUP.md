@@ -364,6 +364,104 @@ This gives a full Termux shell with all packages and environment available.
 
 ---
 
+## Stremio Control (Movies/Shows — Best for AI Assistant)
+
+Stremio supports deep links and has a queryable addon API, making it ideal for programmatic control.
+
+**Package**: `com.stremio.one` (v1.9.12)
+
+### Search for content (no UI needed)
+
+```bash
+# Search movies via Cinemeta addon
+curl -s "https://v3-cinemeta.strem.io/catalog/movie/top/search=inception.json" | jq '.metas[:3]'
+
+# Search TV series
+curl -s "https://v3-cinemeta.strem.io/catalog/series/top/search=breaking+bad.json" | jq '.metas[:3]'
+
+# Get metadata for a specific title by IMDB ID
+curl -s "https://v3-cinemeta.strem.io/meta/movie/tt1375666.json" | jq '.meta.name,.meta.year'
+
+# Get available streams (from Torrentio or other stream addons)
+curl -s "https://torrentio.strem.fun/stream/movie/tt1375666.json" | jq '.streams[:3]'
+```
+
+### Play content via deep links
+
+```bash
+# Open movie detail page
+adb -s localhost:15555 shell am start -a android.intent.action.VIEW \
+  -d "stremio:///detail/movie/tt1375666/tt1375666"
+
+# Open TV series episode (series_imdb_id, season:episode)
+adb -s localhost:15555 shell am start -a android.intent.action.VIEW \
+  -d "stremio:///detail/series/tt0903747/tt0903747:1:1"
+
+# Search inside Stremio
+adb -s localhost:15555 shell am start -a android.intent.action.VIEW \
+  -d "stremio:///search?search=inception"
+
+# Open library
+adb -s localhost:15555 shell am start -a android.intent.action.VIEW \
+  -d "stremio:///library"
+
+# After detail page loads, press OK to start playback
+sleep 3
+adb -s localhost:15555 shell input keyevent 23  # DPAD_CENTER
+```
+
+### Playback control
+
+```bash
+adb shell input keyevent 85   # MEDIA_PLAY_PAUSE
+adb shell input keyevent 86   # MEDIA_STOP
+adb shell input keyevent 90   # MEDIA_FAST_FORWARD
+adb shell input keyevent 89   # MEDIA_REWIND
+adb shell input keyevent 87   # MEDIA_NEXT
+adb shell input keyevent 88   # MEDIA_PREVIOUS
+```
+
+### AI Assistant Workflow
+
+1. **Search**: Query Cinemeta API with `curl` to get IMDB ID — no UI needed
+2. **Open**: Send `stremio:///detail/movie/{imdb_id}/{imdb_id}` via ADB intent
+3. **Play**: Wait 3s, press DPAD_CENTER (keyevent 23) to start playback
+4. **Control**: Use media key events for play/pause/seek
+
+### stremio-mcp (Optional MCP Server)
+
+There's an existing MCP server for Stremio control: `github.com/netixc/stremio-mcp`. It wraps TMDB search + Stremio deep links + ADB into MCP tools. Clone and install:
+
+```bash
+git clone https://github.com/netixc/stremio-mcp.git
+cd stremio-mcp
+# Follow setup instructions in README
+```
+
+---
+
+## SmartTube (YouTube — Ad-Free)
+
+**Package**: `org.smarttube.stable` (v31.30)
+
+```bash
+# Play a YouTube video
+adb -s localhost:15555 shell am start -a android.intent.action.VIEW \
+  -d "https://www.youtube.com/watch?v=VIDEO_ID" \
+  -n org.smarttube.stable/com.liskovsoft.smartyoutubetv2.tv.ui.main.SplashActivity
+
+# Launch SmartTube
+adb -s localhost:15555 shell am start \
+  -n org.smarttube.stable/com.liskovsoft.smartyoutubetv2.tv.ui.main.SplashActivity
+
+# Playback control (same media key events as Stremio)
+adb shell input keyevent 85   # MEDIA_PLAY_PAUSE
+```
+
+> **Note**: SmartTube Beta was removed due to "Cannot load content" errors. The stable version (`org.smarttube.stable`) works. If it breaks in the future, use the official YouTube TV app (`com.google.android.youtube.tv`) as fallback.
+
+---
+
 ## LG TV Control (WebOS SSAP)
 
 The LG TV (75UN8000PSB, WebOS) can be controlled via the SSAP WebSocket API from any device on the LAN. This allows switching inputs, controlling volume, turning the TV on/off, etc.

@@ -327,3 +327,144 @@ Doesn't matter — the TV box initiates the outbound SSH tunnel, so its LAN IP i
 |------|---------|
 | `/home/tunnel/.ssh/authorized_keys` | TV box tunnel key (restricted) |
 | `~/agent-repos/scrcpy-mcp/` | scrcpy-mcp server (to be cloned) |
+
+---
+
+## Display Fix
+
+The TV's left ~30% is dead/black. The display is resized to fit the working area:
+
+```bash
+# Applied on TV box (persists across reboots):
+wm size 1344x1080
+wm density 213
+
+# To reset:
+wm size reset
+wm density reset
+```
+
+This centers content in 70% of the screen (loses ~15% on each side). A proper left-offset fix isn't possible on Android TV 13 (`wm overscan` was removed).
+
+---
+
+## Tips for Navigating the TV Box Remotely
+
+### Use UI snapshots instead of screenshots
+
+Screenshots consume large amounts of context/tokens. Use `uiautomator dump` to get a text-based view of the screen:
+
+```bash
+# Get all visible text elements and their positions
+adb -s localhost:15555 shell "uiautomator dump /sdcard/ui.xml && cat /sdcard/ui.xml" | \
+  tr '>' '>\n' | grep -oE '(text|content-desc|bounds)="[^"]*"' | \
+  grep -v '=""' | head -30
+```
+
+**WARNING**: `uiautomator dump` can dismiss popups/dialogs. If you're interacting with a dialog, take a screenshot first, then use snapshots for subsequent navigation.
+
+Only use screenshots when:
+- You need to see the visual layout (images, icons, video content)
+- You need exact coordinates for tapping on non-text elements
+- UI dump returns nothing useful (some apps use custom rendering)
+
+### Navigation via key events (preferred for Android TV)
+
+Android TV is designed for remote control navigation. Use d-pad keys instead of tap coordinates when possible:
+
+```bash
+# D-pad navigation (most reliable on Android TV)
+adb shell input keyevent KEYCODE_DPAD_UP
+adb shell input keyevent KEYCODE_DPAD_DOWN
+adb shell input keyevent KEYCODE_DPAD_LEFT
+adb shell input keyevent KEYCODE_DPAD_RIGHT
+adb shell input keyevent KEYCODE_DPAD_CENTER    # Select/confirm (like pressing OK)
+adb shell input keyevent KEYCODE_ENTER          # Also works as select
+
+# System keys
+adb shell input keyevent KEYCODE_HOME
+adb shell input keyevent KEYCODE_BACK
+adb shell input keyevent KEYCODE_MENU
+
+# Media keys
+adb shell input keyevent KEYCODE_MEDIA_PLAY_PAUSE
+adb shell input keyevent KEYCODE_MEDIA_NEXT
+adb shell input keyevent KEYCODE_MEDIA_PREVIOUS
+adb shell input keyevent KEYCODE_MEDIA_STOP
+adb shell input keyevent KEYCODE_VOLUME_UP
+adb shell input keyevent KEYCODE_VOLUME_DOWN
+adb shell input keyevent KEYCODE_MUTE
+```
+
+### Tapping by text (find element, then tap center of bounds)
+
+When you need to tap a specific UI element:
+
+```bash
+# 1. Dump UI and find the element
+adb shell "uiautomator dump /sdcard/ui.xml && cat /sdcard/ui.xml" | \
+  tr '>' '>\n' | grep "Settings" | grep -oE 'bounds="\[[0-9,]+\]\[[0-9,]+\]"'
+# Output: bounds="[100,200][300,400]"
+
+# 2. Calculate center: x=(100+300)/2=200, y=(200+400)/2=300
+adb shell input tap 200 300
+```
+
+### Typing text
+
+```bash
+# Type text (spaces are encoded as %s)
+adb shell input text "hello%sworld"
+
+# For special characters, use key events:
+adb shell input keyevent KEYCODE_AT          # @
+adb shell input keyevent KEYCODE_PERIOD      # .
+adb shell input keyevent KEYCODE_SLASH       # /
+```
+
+### App launching patterns
+
+```bash
+# Open a URL in the browser
+adb shell am start -a android.intent.action.VIEW -d "https://youtube.com"
+
+# Launch app by package name
+adb shell monkey -p com.liskovsoft.smarttubetv.beta -c android.intent.category.LEANBACK_LAUNCHER 1
+
+# Force stop an app
+adb shell am force-stop com.google.android.youtube.tv
+
+# Go to Android TV home screen
+adb shell input keyevent KEYCODE_HOME
+```
+
+### Workflow: screenshot → analyze → act
+
+When navigating an unfamiliar screen:
+
+1. **First**, try a UI snapshot to understand the layout
+2. If the snapshot is insufficient (custom UI, images), take a screenshot
+3. Use d-pad navigation when possible (more reliable than taps on TV)
+4. After taking an action, snapshot again to verify the result
+
+```bash
+# Example: navigate to YouTube and search
+adb shell input keyevent KEYCODE_HOME                    # Go home
+adb shell monkey -p com.liskovsoft.smarttubetv.beta 1    # Open SmartTube
+sleep 3
+adb shell input keyevent KEYCODE_DPAD_UP                 # Navigate to search
+adb shell input keyevent KEYCODE_DPAD_CENTER              # Open search
+sleep 1
+adb shell input text "relaxing%smusic"                   # Type search query
+adb shell input keyevent KEYCODE_ENTER                    # Search
+```
+
+### Monitoring what's on screen
+
+```bash
+# Quick check: what app is in foreground?
+adb shell dumpsys activity activities | grep mResumedActivity
+
+# What's playing? (media session info)
+adb shell dumpsys media_session | grep -A5 "metadata"
+```

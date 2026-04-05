@@ -143,7 +143,10 @@ slang=es-419,es-MX,es-LA,lat,latino,spa,es,eng,en
 - **Developer Mode**: 1000-hour timer (not power-off expiry). Reset periodically.
 - **Wake-on-LAN**: Doesn't work despite `wolwowlOnOff=true` and Quick Start+ enabled
 - **CEC wake**: `su 0 cmd hdmi_control onetouchplay` — **WORKS** (reports "timed out" but TV turns on)
+- **CEC disabled on boot**: `persist.close.cec=true` prevents auto-input-switch. Enable temporarily for wake.
 - **CEC requires**: SIMPLINK (HDMI-CEC) ON + Auto Power Sync ON on the LG TV
+- **SSAP tunnel**: Reverse SSH forwards TV SSAP port (`-R 13001:TV_IP:3001`). Oracle VM connects to `localhost:13001`.
+- **TV IP discovery**: By MAC address `b4:b2:91:00:9e:80` via ARP table on TV box. Cached 5 minutes.
 - **TV SSH**: `prisoner@192.168.100.13:9922`, key from `/var/luna/preferences/webos_rsa` (encrypted, decrypt with Dev Mode passphrase)
 - **`luna-send-pub`**: Runs but returns empty for most queries as prisoner user
 - **PalmServiceBridge**: Not available in the WebOS browser

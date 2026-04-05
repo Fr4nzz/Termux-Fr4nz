@@ -36,11 +36,26 @@ Android's wireless debugging feature overrides `persist.adb.tcp.port` with a ran
 - Settings database has `adb_enabled=1`
 - **Still fails sometimes** — wireless debugging override persists across reboots
 
+### Root Cause Found
+The Rockchip firmware (`/vendor/etc/init/hw/init.rk30board.rc`) has a built-in mechanism:
+```
+on property:persist.internet_adb_enable=1
+    setprop service.adb.tcp.port 5555
+    restart adbd
+```
+This WORKS — but Android's wireless debugging system (`persist.adb.tls_server.enable=1`) overrides it with a random port. Fix: disable wireless debugging TLS (`persist.adb.tls_server.enable=0`) and rely on Rockchip's `internet_adb` mechanism.
+
+### Deployed Safety Net
+- `/data/local/tmp/adb_watchdog.sh` — checks every 60s, corrects port if overridden
+- `/system/etc/init/adb_watchdog.rc` — starts watchdog on boot
+- `/system/etc/init/adb_tcp.rc` — delayed (15s) port override on boot
+
 ### What NOT to Do
-- **Don't set `persist.internet_adb_enable=0`** — kills all network ADB
-- **Don't set `persist.adb.tls_server.enable=0`** — kills wireless debugging
+- **Don't set `persist.internet_adb_enable=0`** — kills all network ADB (Rockchip init sets port to 0)
+- **Don't set `persist.adb.tls_server.enable=0` via ADB** — kills current wireless debugging session (use it only when you have another way to connect)
 - **Don't `setprop ctl.restart adbd` while scrcpy is running** — kills the connection
 - **Don't reboot without warning the user** — they may lose scrcpy session
+- **Don't `setprop persist.*` right before rebooting** — may crash adbd during shutdown
 
 ### If ADB Stops Working After Reboot
 1. Go to Settings → Developer Options on the TV box
@@ -132,6 +147,13 @@ slang=es-419,es-MX,es-LA,lat,latino,spa,es,eng,en
 - **TV SSH**: `prisoner@192.168.100.13:9922`, key from `/var/luna/preferences/webos_rsa` (encrypted, decrypt with Dev Mode passphrase)
 - **`luna-send-pub`**: Runs but returns empty for most queries as prisoner user
 - **PalmServiceBridge**: Not available in the WebOS browser
+
+### CEC Auto-Switch Fix
+The TV box auto-switches the TV input to HDMI_4 on every boot via CEC "Active Source" message. Fixed by:
+```bash
+su 0 cmd hdmi_control cec_setting set power_control_mode none
+```
+This persists across reboots. Intentional `onetouchplay` still works — the AI assistant can still wake the TV and switch input on demand.
 
 ### What NOT to Do
 - Don't turn TV off if you need immediate CEC wake — put to standby via SSAP, CEC wakes from standby only

@@ -149,11 +149,22 @@ slang=es-419,es-MX,es-LA,lat,latino,spa,es,eng,en
 - **PalmServiceBridge**: Not available in the WebOS browser
 
 ### CEC Auto-Switch Fix
-The TV box auto-switches the TV input to HDMI_4 on every boot via CEC "Active Source" message. Fixed by:
+The TV box auto-switches the TV input to HDMI_4 on every boot via CEC "Active Source" message.
+
+**What didn't work:** `power_control_mode=none` — persists but Active Source is sent during address allocation before this setting is checked.
+
+**What WORKS:** `persist.close.cec=true` — Rockchip HAL-level CEC suppression. Prevents ALL CEC messages on boot.
+
+To wake TV on demand (AI assistant enables CEC temporarily):
 ```bash
-su 0 cmd hdmi_control cec_setting set power_control_mode none
+su 0 setprop persist.close.cec false
+su 0 cmd hdmi_control cec_setting set hdmi_cec_enabled 1
+sleep 3
+su 0 cmd hdmi_control onetouchplay
+sleep 3
+su 0 cmd hdmi_control cec_setting set hdmi_cec_enabled 0
+su 0 setprop persist.close.cec true
 ```
-This persists across reboots. Intentional `onetouchplay` still works — the AI assistant can still wake the TV and switch input on demand.
 
 ### What NOT to Do
 - Don't turn TV off if you need immediate CEC wake — put to standby via SSAP, CEC wakes from standby only
